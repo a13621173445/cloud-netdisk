@@ -50,23 +50,25 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=7"></script>
-    <script src="js/github.js?v=5"></script>
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=11"></script>
     <script src="js/ui.js?v=8"></script>
     <script>
         // 检查配置
-        if (!CONFIG.isConfigured()) {
-            window.location.href = 'login.html';
-        }
-
-        // 如果已登录，跳转到首页
-        if (Netdisk.getCurrentUserLocal()) {
-            window.location.href = 'index.html';
-        }
-
-        // 同一天、同一 IP 自动登录
         (async () => {
+            if (!(await CONFIG.isConfigured())) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 如果已登录，跳转到首页
+            if (Netdisk.getCurrentUserLocal()) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // 同一天、同一 IP 自动登录
             try {
                 const autoLogin = await Netdisk.checkAutoLogin();
                 if (autoLogin) {

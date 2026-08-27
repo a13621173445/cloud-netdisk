@@ -1,1 +1,30 @@
-{"files":[{"id":"c09c23b3-5f66-48f4-adea-63100ec5e742","name":"2b2t.fun    kit备份.png","size":2444005,"type":"image/png","path":"netdisk/storage/c09c23b3-5f66-48f4-adea-63100ec5e742_2b2t.fun____kit__.png","ownerId":"6a9be1c2-19aa-4673-bfab-d09dec663ef2","shared":true,"shareToken":"4e562f7f4a483ba4f0bd95d0a11b4b60df2421b6bb3d95a6aa7adf27c924ef62","uploadedAt":"2026-08-27T08:38:18.110Z","shareExpireDays":7,"shareExpireAt":"2026-09-03T10:58:39.468Z","shareMaxDownloads":5,"shareDownloadCount":0}]}
+{
+  "files": [
+    {
+      "id": "c09c23b3-5f66-48f4-adea-63100ec5e742",
+      "name": "2b2t.fun    kit备份.png",
+      "size": 2444005,
+      "type": "image/png",
+      "path": "netdisk/storage/c09c23b3-5f66-48f4-adea-63100ec5e742_2b2t.fun____kit__.png",
+      "ownerId": "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
+      "shared": true,
+      "shareToken": "4e562f7f4a483ba4f0bd95d0a11b4b60df2421b6bb3d95a6aa7adf27c924ef62",
+      "uploadedAt": "2026-08-27T08:38:18.110Z",
+      "shareExpireDays": 7,
+      "shareExpireAt": "2026-09-03T10:58:39.468Z",
+      "shareMaxDownloads": 5,
+      "shareDownloadCount": 0
+    },
+    {
+      "id": "0a34da89-6fa1-4f2a-ab53-ba2cc8a33789",
+      "name": "Image_1787825347753_745.png",
+      "size": 536872,
+      "type": "image/png",
+      "path": "netdisk/storage/0a34da89-6fa1-4f2a-ab53-ba2cc8a33789_Image_1787825347753_745.png",
+      "ownerId": "0d73d724-700e-4241-8804-51cca19e90a7",
+      "shared": false,
+      "shareToken": null,
+      "uploadedAt": "2026-08-27T22:32:31.496Z"
+    }
+  ]
+}

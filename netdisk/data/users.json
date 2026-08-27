@@ -1,18 +1,3 @@
 {
-    "users":  [
-                  {
-                      "id":  "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
-                      "username":  "a13621173445",
-                      "email":  "a13621173445@163.com",
-                      "passwordHash":  "ce36c5e64e174d5bd8453aa0b0b39ddab168cd33bcb58e669d91ee39ba9cc1c1",
-                      "salt":  "d713076b4bfdc313311348aa9ab2b918",
-                      "verified":  true,
-                      "verificationToken":  null,
-                      "resetToken":  null,
-                      "resetTokenExpiry":  null,
-                      "createdAt":  "2026-08-27T08:10:06.474Z",
-                      "role":  "admin",
-                      "status":  "active"
-                  }
-              ]
+  "users": []
 }

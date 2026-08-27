@@ -16,6 +16,11 @@ function generateToken() {
     return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// 生成 6 位数字验证码
+function generateVerificationCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 function sanitizeFilename(name) {
     return name.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
@@ -106,17 +111,18 @@ const Netdisk = {
         // 哈希密码后存储（PBKDF2 + 随机盐）
         const salt = await generateSalt();
         const passwordHash = await hashPassword(password, salt);
-        const verificationToken = generateToken();
+        const verificationCode = generateVerificationCode();
         const newUser = {
             id: generateId(),
             username: username.trim(),
             email: email.trim(),
             passwordHash: passwordHash,
             salt: salt,
-            role: 'user',           // 角色: user / admin
+            role: 'user',           // 角色: user / admin / superadmin
             status: 'active',       // 状态: active / disabled / frozen / deleted
             verified: false,
-            verificationToken: verificationToken,
+            verificationCode: verificationCode,
+            verificationCodeExpiry: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10分钟有效
             resetToken: null,
             resetTokenExpiry: null,
             createdAt: new Date().toISOString()
@@ -133,9 +139,9 @@ const Netdisk = {
             `新用户注册: ${username}`
         );
 
-        // 发送验证邮件
+        // 发送验证码邮件
         try {
-            await this.sendVerificationEmail(email, verificationToken);
+            await this.sendVerificationCode(email, verificationCode, '验证你的邮箱');
         } catch (e) {
             // 邮件发送失败不影响注册
             console.warn('验证邮件发送失败:', e);
@@ -143,36 +149,42 @@ const Netdisk = {
 
         return {
             success: true,
-            message: '注册成功！请查收验证邮件完成验证。',
+            message: '注册成功！验证码已发送到你的邮箱，请输入验证码完成验证。',
             user: { id: newUser.id, username: newUser.username, email: newUser.email, verified: false }
         };
     },
 
     // ============ 发送验证邮件 ============
 
-    async sendVerificationEmail(email, token) {
-        const verifyUrl = `${CONFIG.getPagesUrl()}/verify.html?token=${token}`;
-        const body = `验证你的邮箱地址
+    // 发送验证码邮件（纯文本）
+    async sendVerificationCode(email, code, purpose = '验证你的邮箱') {
+        const body = `${purpose}
 
-感谢注册 GitHub Netdisk！请点击下方链接验证你的邮箱：
+你的验证码是：${code}
 
-${verifyUrl}
-
-如果链接无法点击，请复制以上链接到浏览器地址栏打开。
+验证码 10 分钟内有效，请勿泄露给他人。
 
 此邮件由系统自动发送，请勿回复。`;
 
         await GitHubAPI.dispatchEvent('send-email', {
             to: email,
-            subject: '验证你的邮箱地址 - GitHub Netdisk',
+            subject: `${purpose} - GitHub Netdisk`,
             body: body
         });
     },
 
+    // 发送验证邮件（兼容旧版，发送验证码）
+    async sendVerificationEmail(email, token) {
+        // 生成 6 位验证码并发送
+        const code = generateVerificationCode();
+        await this.sendVerificationCode(email, code, '验证你的邮箱');
+        return code;
+    },
+
     // ============ 邮箱验证 ============
 
-    async verifyEmail(token) {
-        if (!token) throw new Error('验证令牌无效');
+    async verifyEmail(code) {
+        if (!code) throw new Error('请输入验证码');
 
         let verifiedUser = null;
 
@@ -180,11 +192,16 @@ ${verifyUrl}
             CONFIG.DATA.USERS,
             (data) => {
                 if (!data.users) data.users = [];
-                const user = data.users.find(u => u.verificationToken === token);
-                if (!user) throw new Error('验证令牌无效或已使用');
+                const user = data.users.find(u => u.verificationCode === code);
+                if (!user) throw new Error('验证码无效');
                 if (user.verified) throw new Error('邮箱已验证，无需重复操作');
+                // 检查验证码是否过期
+                if (user.verificationCodeExpiry && new Date(user.verificationCodeExpiry) < new Date()) {
+                    throw new Error('验证码已过期，请重新获取');
+                }
                 user.verified = true;
-                user.verificationToken = null;
+                user.verificationCode = null;
+                user.verificationCodeExpiry = null;
                 verifiedUser = user;
                 return data;
             },
@@ -192,6 +209,29 @@ ${verifyUrl}
         );
 
         return { success: true, message: '邮箱验证成功！现在可以登录了。' };
+    },
+
+    // 重新发送验证码
+    async resendVerificationCode(email) {
+        if (!email) throw new Error('请输入邮箱地址');
+
+        const code = generateVerificationCode();
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const user = data.users.find(u => u.email === email);
+                if (!user) throw new Error('该邮箱未注册');
+                if (user.verified) throw new Error('邮箱已验证');
+                user.verificationCode = code;
+                user.verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+                return data;
+            },
+            '重新发送验证码'
+        );
+
+        await this.sendVerificationCode(email, code, '验证你的邮箱');
+        return { success: true, message: '验证码已重新发送' };
     },
 
     // ============ 用户登录 ============
@@ -600,21 +640,63 @@ ${verifyUrl}
 
     // ============ 注销自己的账户 ============
 
-    async deleteMyAccount(password) {
+    // 发送注销验证码
+    async sendDeleteAccountCode() {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
-        if (!password) throw new Error('请输入当前密码以确认注销');
 
-        // 验证密码
         const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
         const users = (usersData && usersData.users) || [];
         const user = users.find(u => u.id === currentUser.id);
         if (!user) throw new Error('用户不存在');
-        const isValid = await verifyPassword(password, user.salt, user.passwordHash);
-        if (!isValid) throw new Error('密码错误');
 
         // 超级管理员不能注销自己
         if (user.role === 'superadmin') throw new Error('超级管理员不能注销自己的账户');
+
+        const code = generateVerificationCode();
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const u = data.users.find(x => x.id === currentUser.id);
+                if (!u) throw new Error('用户不存在');
+                u.deleteAccountCode = code;
+                u.deleteAccountCodeExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+                return data;
+            },
+            '发送注销验证码'
+        );
+
+        await this.sendVerificationCode(user.email, code, '注销账户确认');
+        return { success: true, message: '注销验证码已发送到你的邮箱' };
+    },
+
+    async deleteMyAccount(password, code) {
+        const currentUser = this.getCurrentUserLocal();
+        if (!currentUser) throw new Error('请先登录');
+        if (!password) throw new Error('请输入当前密码');
+        if (!code) throw new Error('请输入邮箱验证码');
+
+        // 读取用户数据
+        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData && usersData.users) || [];
+        const user = users.find(u => u.id === currentUser.id);
+        if (!user) throw new Error('用户不存在');
+
+        // 超级管理员不能注销自己
+        if (user.role === 'superadmin') throw new Error('超级管理员不能注销自己的账户');
+
+        // 第一重确认：验证密码
+        const isValid = await verifyPassword(password, user.salt, user.passwordHash);
+        if (!isValid) throw new Error('密码错误');
+
+        // 第二重确认：验证注销验证码
+        if (!user.deleteAccountCode || user.deleteAccountCode !== code) {
+            throw new Error('验证码错误');
+        }
+        if (user.deleteAccountCodeExpiry && new Date(user.deleteAccountCodeExpiry) < new Date()) {
+            throw new Error('验证码已过期，请重新获取');
+        }
 
         // 删除该用户的所有文件
         const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
@@ -701,6 +783,60 @@ ${verifyUrl}
         );
 
         return { success: true, message: '解冻申请已提交，请等待管理员处理' };
+    },
+
+    // ============ 管理员：查看解冻申请 ============
+
+    async adminListUnfreezeRequests() {
+        this.requireAdmin();
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (data && data.users) || [];
+        return users
+            .filter(u => u.unfreezeRequested)
+            .map(u => ({
+                id: u.id,
+                username: u.username,
+                email: u.email,
+                status: u.status || 'active',
+                role: u.role || 'user',
+                unfreezeRequestedAt: u.unfreezeRequestedAt,
+                statusReason: u.statusReason || ''
+            }));
+    },
+
+    // 管理员：处理解冻申请（解冻或拒绝）
+    async adminHandleUnfreezeRequest(userId, approve) {
+        this.requireAdmin();
+        const currentUser = this.getCurrentUserLocal();
+        const currentRole = currentUser.role || 'user';
+
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const user = data.users.find(u => u.id === userId);
+                if (!user) throw new Error('用户不存在');
+                const targetRole = user.role || 'user';
+
+                // 超级管理员永不被操作
+                if (targetRole === 'superadmin') throw new Error('不能操作超级管理员账户');
+                // 管理员不能操作管理员，只能操作普通用户
+                if (currentRole === 'admin' && targetRole !== 'user') throw new Error('不能操作管理员账户');
+
+                if (approve) {
+                    user.status = 'active';
+                    user.statusReason = '';
+                    user.statusUpdatedAt = new Date().toISOString();
+                    user.statusUpdatedBy = currentUser.username;
+                }
+                user.unfreezeRequested = false;
+                user.unfreezeRequestedAt = null;
+                return data;
+            },
+            approve ? '批准解冻申请' : '拒绝解冻申请'
+        );
+
+        return { success: true, message: approve ? '已批准解冻' : '已拒绝解冻申请' };
     },
 
     // ============ 文件上传 ============
@@ -1183,16 +1319,16 @@ ${verifyUrl}
     },
 
     // 禁用用户（管理员） - 禁止登录
-    async adminDisableUser(userId) {
+    async adminDisableUser(userId, reason = '') {
         this.requireAdmin();
-        await this._setUserStatus(userId, 'disabled', '禁用');
+        await this._setUserStatus(userId, 'disabled', '禁用', reason);
         return { success: true, message: '用户已禁用' };
     },
 
     // 冻结用户（管理员） - 禁止登录，保留数据
-    async adminFreezeUser(userId) {
+    async adminFreezeUser(userId, reason = '') {
         this.requireAdmin();
-        await this._setUserStatus(userId, 'frozen', '冻结');
+        await this._setUserStatus(userId, 'frozen', '冻结', reason);
         return { success: true, message: '用户已冻结' };
     },
 
@@ -1270,7 +1406,7 @@ ${verifyUrl}
     },
 
     // 内部工具：设置用户状态
-    async _setUserStatus(userId, status, label) {
+    async _setUserStatus(userId, status, label, reason = '') {
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error(`不能${label}自己的账户`);
         const currentRole = currentUser.role || 'user';
@@ -1291,6 +1427,9 @@ ${verifyUrl}
                 if (currentRole !== 'admin' && currentRole !== 'superadmin') throw new Error('无操作权限');
 
                 user.status = status;
+                user.statusReason = reason || '';
+                user.statusUpdatedAt = new Date().toISOString();
+                user.statusUpdatedBy = currentUser.username;
                 return data;
             },
             `管理员${label}用户: ${userId}`

@@ -70,7 +70,9 @@ const GitHubAPI = {
      * @returns { content, sha, encoding } 或 null（文件不存在时）
      */
     async getContent(path) {
-        const response = await this.request('GET', `/contents/${path}?ref=${CONFIG.BRANCH}`);
+        // 添加时间戳参数绕过 CDN 缓存，确保读取到最新数据
+        const cacheBuster = Date.now();
+        const response = await this.request('GET', `/contents/${path}?ref=${CONFIG.BRANCH}&t=${cacheBuster}`);
 
         if (response.status === 404) {
             return null;

@@ -1327,6 +1327,17 @@ const Netdisk = {
         return { success: true, message: '文件已删除' };
     },
 
+    // 下载文件（管理员） - 下载任意用户的文件
+    async adminDownloadFile(fileId) {
+        this.requireAdmin();
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (data && data.files) || [];
+        const file = files.find(f => f.id === fileId);
+        if (!file) throw new Error('文件不存在');
+        const rawUrl = GitHubAPI.getRawUrl(file.path);
+        return { url: rawUrl, name: file.name, type: file.type };
+    },
+
     // 禁用用户（管理员） - 禁止登录
     async adminDisableUser(userId, reason = '') {
         this.requireAdmin();

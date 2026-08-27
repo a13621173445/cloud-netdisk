@@ -311,9 +311,12 @@ const Netdisk = {
 
         // 检查账户状态
         const status = user.status || 'active';
-        if (status === 'disabled') throw new Error('该账户已被禁用，请联系管理员');
-        if (status === 'frozen') throw new Error('该账户已被冻结，请联系管理员');
+        if (status === 'frozen') {
+            const adminEmails = users.filter(u => u.role === 'admin' || u.role === 'superadmin').map(u => u.email).join(', ');
+            throw new Error(`你的账户已被冻结，请联系超级管理员或管理员：${adminEmails}`);
+        }
         if (status === 'deleted') throw new Error('该账户已注销，无法登录');
+        // 禁用状态允许登录，但访问受限
 
         // 获取客户端 IP
         const ip = await this.getClientIp();
@@ -451,9 +454,9 @@ const Netdisk = {
             return null;
         }
 
-        // 检查账户状态，非 active 状态强制登出
+        // 检查账户状态，冻结/注销状态强制登出，禁用状态保留登录
         const status = user.status || 'active';
-        if (status !== 'active') {
+        if (status === 'frozen' || status === 'deleted') {
             this.logout();
             return null;
         }

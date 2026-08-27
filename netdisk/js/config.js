@@ -59,9 +59,14 @@ const CONFIG = {
     },
 
     getPagesUrl() {
+        // 优先使用配置的 PAGES_BASE_URL（部署时设置的正确地址）
+        if (this.PAGES_BASE_URL && this.PAGES_BASE_URL !== 'https://USERNAME.github.io/REPO_NAME') {
+            return this.PAGES_BASE_URL;
+        }
+        // 其次使用 localStorage 中用户自定义的地址
         const custom = localStorage.getItem('netdisk_pages_url');
         if (custom) return custom;
-        // 动态推导当前页面基础 URL
+        // 最后动态推导当前页面基础 URL
         const path = window.location.pathname;
         const basePath = path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1);
         return window.location.origin + basePath;

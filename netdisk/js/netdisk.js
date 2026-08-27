@@ -760,7 +760,7 @@ const Netdisk = {
 
     // ============ 申请解冻/解禁 ============
 
-    async requestUnfreeze() {
+    async requestUnfreeze(reason = '') {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
 
@@ -770,10 +770,12 @@ const Netdisk = {
         if (!user) throw new Error('用户不存在');
 
         const status = user.status || 'active';
-        if (status === 'active') throw new Error('账户状态正常，无需申请解冻');
-        if (status === 'deleted') throw new Error('账户已注销，无法申请解冻');
+        if (status === 'active') throw new Error('账户状态正常，无需申请解禁');
+        if (status === 'deleted') throw new Error('账户已注销，无法申请解禁');
 
-        // 设置申请解冻标记
+        if (reason.length > 500) throw new Error('申请原因不能超过 500 字');
+
+        // 设置申请解禁标记
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.USERS,
             (data) => {
@@ -782,12 +784,13 @@ const Netdisk = {
                 if (!u) throw new Error('用户不存在');
                 u.unfreezeRequested = true;
                 u.unfreezeRequestedAt = new Date().toISOString();
+                u.unfreezeReason = reason;
                 return data;
             },
-            '申请解冻/解禁'
+            '申请解禁'
         );
 
-        return { success: true, message: '解冻申请已提交，请等待管理员处理' };
+        return { success: true, message: '解禁申请已提交，请等待管理员处理' };
     },
 
     // ============ 管理员：查看解冻申请 ============
@@ -805,7 +808,8 @@ const Netdisk = {
                 status: u.status || 'active',
                 role: u.role || 'user',
                 unfreezeRequestedAt: u.unfreezeRequestedAt,
-                statusReason: u.statusReason || ''
+                statusReason: u.statusReason || '',
+                unfreezeReason: u.unfreezeReason || ''
             }));
     },
 

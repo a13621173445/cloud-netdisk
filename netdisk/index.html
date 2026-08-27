@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -118,26 +118,35 @@
             fileInput: null,
 
             async init() {
+                // 检查配置
                 if (!CONFIG.isConfigured()) {
                     window.location.href = 'setup.html';
                     return;
                 }
 
+                // 检查登录
                 this.currentUser = await Netdisk.getCurrentUser();
                 if (!this.currentUser) {
                     window.location.href = 'login.html';
                     return;
                 }
 
+                // 显示用户信息
                 document.getElementById('user-name').textContent = this.currentUser.username;
                 document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
 
+                // 管理员显示管理后台入口
                 if (this.currentUser.role === 'admin') {
                     document.getElementById('admin-btn').style.display = 'inline-flex';
                 }
 
+                // 初始化上传
                 this.initUpload();
+
+                // 加载文件列表
                 await this.loadFiles();
+
+                // 绑定事件
                 this.bindEvents();
             },
 
@@ -145,10 +154,12 @@
                 this.fileInput = document.getElementById('file-input');
                 const uploadArea = document.getElementById('upload-area');
 
+                // 点击上传
                 uploadArea.addEventListener('click', () => {
                     this.fileInput.click();
                 });
 
+                // 文件选择
                 this.fileInput.addEventListener('change', (e) => {
                     if (e.target.files.length > 0) {
                         this.uploadFile(e.target.files[0]);
@@ -156,6 +167,7 @@
                     }
                 });
 
+                // 拖拽上传
                 uploadArea.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     uploadArea.classList.add('dragover');
@@ -202,6 +214,7 @@
                     const result = await Netdisk.downloadFile(fileId);
                     UI.hideLoading();
 
+                    // 创建下载链接
                     const a = document.createElement('a');
                     a.href = result.url;
                     a.download = result.name;
@@ -216,6 +229,7 @@
             },
 
             async shareFile(fileId) {
+                // 打开分享配置弹窗
                 this.currentShareFileId = fileId;
                 document.getElementById('share-config').style.display = 'block';
                 document.getElementById('share-result').style.display = 'none';
@@ -240,6 +254,7 @@
                     document.getElementById('share-config').style.display = 'none';
                     document.getElementById('share-result').style.display = 'block';
 
+                    // 显示限制信息
                     const expireText = result.expireDays === -1 ? '无限制' : `${result.expireDays} 天`;
                     const downloadText = result.maxDownloads === -1 ? '无限制' : `${result.maxDownloads} 次`;
                     document.getElementById('share-limit-info').textContent = `有效期：${expireText}，下载次数：${downloadText}`;
@@ -265,19 +280,23 @@
             },
 
             bindEvents() {
+                // 退出登录
                 document.getElementById('logout-btn').addEventListener('click', async () => {
                     await Netdisk.logout();
                     window.location.href = 'login.html';
                 });
 
+                // 管理后台
                 document.getElementById('admin-btn').addEventListener('click', () => {
                     window.location.href = 'admin.html';
                 });
 
+                // 上传按钮
                 document.getElementById('upload-btn').addEventListener('click', () => {
                     this.fileInput.click();
                 });
 
+                // 分享模态框
                 document.getElementById('close-share-btn').addEventListener('click', () => {
                     document.getElementById('share-modal').style.display = 'none';
                 });
@@ -291,6 +310,7 @@
                     UI.copyToClipboard(input.value);
                 });
 
+                // 修改密码
                 document.getElementById('pwd-btn').addEventListener('click', () => {
                     document.getElementById('pwd-modal').style.display = 'flex';
                 });

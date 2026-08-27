@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=12">
+    <link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -86,7 +86,7 @@
     <script src="js/config.js?v=5"></script>
     <script src="js/github.js?v=5"></script>
     <script src="js/netdisk.js?v=6"></script>
-    <script src="js/ui.js?v=12"></script>
+    <script src="js/ui.js?v=13"></script>
     <script>
         const App = {
             currentUser: null,
@@ -99,18 +99,26 @@
                     return;
                 }
 
-                // 检查登录（优先用本地缓存，避免网络异常导致显示异常）
+                // 检查登录状态：本地缓存不存在则重置为未登录并回到登录页
                 this.currentUser = Netdisk.getCurrentUserLocal();
                 if (!this.currentUser) {
+                    Netdisk.logout();
                     window.location.href = 'login.html';
                     return;
                 }
 
-                // 尝试从服务端获取最新用户信息（失败则用本地缓存）
+                // 尝试从服务端验证会话
+                // - 服务端会话有效：使用服务端最新信息
+                // - 服务端会话无效（返回 null）：重置登录状态并回到登录页
+                // - 网络异常：使用本地缓存，避免误跳转
                 try {
                     const serverUser = await Netdisk.getCurrentUser();
                     if (serverUser) {
                         this.currentUser = serverUser;
+                    } else {
+                        // 服务端会话无效，getCurrentUser 已调用 logout 清除本地状态
+                        window.location.href = 'login.html';
+                        return;
                     }
                 } catch (e) {
                     // 网络异常时使用本地缓存

@@ -210,5 +210,61 @@ const UI = {
             textarea.remove();
             this.showMessage('已复制到剪贴板', 'success');
         }
+    },
+
+    // ============ 页面内确认弹窗（替代浏览器 confirm） ============
+
+    /**
+     * 显示页面内确认弹窗
+     * @param {string} message - 提示信息
+     * @param {string} title - 弹窗标题（默认"确认操作"）
+     * @param {string} confirmText - 确认按钮文字（默认"确认"）
+     * @param {string} cancelText - 取消按钮文字（默认"取消"）
+     * @returns {Promise<boolean>} - 用户点击确认返回 true，取消返回 false
+     */
+    confirm(message, title = '确认操作', confirmText = '确认', cancelText = '取消') {
+        return new Promise((resolve) => {
+            // 创建遮罩层
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay confirm-overlay';
+            overlay.style.display = 'flex';
+
+            overlay.innerHTML = `
+                <div class="modal confirm-modal">
+                    <h3>${this.escapeHtml(title)}</h3>
+                    <div class="modal-body">
+                        <p class="confirm-message">${this.escapeHtml(message)}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary btn-sm confirm-cancel-btn">${this.escapeHtml(cancelText)}</button>
+                        <button class="btn btn-primary btn-sm confirm-ok-btn">${this.escapeHtml(confirmText)}</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const cleanup = (result) => {
+                overlay.remove();
+                resolve(result);
+            };
+
+            overlay.querySelector('.confirm-ok-btn').addEventListener('click', () => cleanup(true));
+            overlay.querySelector('.confirm-cancel-btn').addEventListener('click', () => cleanup(false));
+
+            // 点击遮罩层空白处取消
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup(false);
+            });
+
+            // 按 Esc 取消
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    document.removeEventListener('keydown', escHandler);
+                    cleanup(false);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
     }
 };

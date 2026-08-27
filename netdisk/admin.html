@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理后台 - GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=13">
     <style>
         .admin-tabs {
             display: flex;
@@ -153,7 +153,7 @@
     <script src="js/config.js?v=5"></script>
     <script src="js/github.js?v=5"></script>
     <script src="js/netdisk.js?v=6"></script>
-    <script src="js/ui.js?v=10"></script>
+    <script src="js/ui.js?v=13"></script>
     <script>
         const Admin = {
             currentUser: null,
@@ -164,10 +164,28 @@
                     return;
                 }
 
-                this.currentUser = await Netdisk.getCurrentUser();
+                // 检查登录状态：本地缓存不存在则重置为未登录并回到登录页
+                this.currentUser = Netdisk.getCurrentUserLocal();
                 if (!this.currentUser) {
+                    Netdisk.logout();
                     window.location.href = 'login.html';
                     return;
+                }
+
+                // 尝试从服务端验证会话
+                // - 服务端会话有效：使用服务端最新信息
+                // - 服务端会话无效（返回 null）：重置登录状态并回到登录页
+                // - 网络异常：使用本地缓存，避免误跳转
+                try {
+                    const serverUser = await Netdisk.getCurrentUser();
+                    if (serverUser) {
+                        this.currentUser = serverUser;
+                    } else {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                } catch (e) {
+                    // 网络异常时使用本地缓存
                 }
 
                 // 检查管理员权限

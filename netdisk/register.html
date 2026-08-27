@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>注册 - GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
     <div class="auth-wrapper">
@@ -38,19 +38,34 @@
                 <button type="submit" class="btn btn-primary" id="register-btn">注册</button>
             </form>
 
+            <!-- 验证码确认 -->
+            <div id="verify-section" style="display: none;">
+                <div class="alert alert-success" style="font-size: 13px; margin-bottom: 16px;">
+                    注册成功！验证码已发送到你的邮箱，请输入验证码完成验证。
+                </div>
+                <div class="form-group">
+                    <label>邮箱验证码</label>
+                    <input type="text" id="verify-code" placeholder="输入 6 位验证码" maxlength="6" style="letter-spacing: 4px; text-align: center; font-size: 20px;">
+                </div>
+                <button class="btn btn-primary" id="verify-btn">验证邮箱</button>
+                <div class="mt-16 text-center">
+                    <a href="#" id="resend-code-link" class="link">重新发送验证码</a>
+                </div>
+            </div>
+
             <div class="mt-24 text-center">
                 <a href="login.html" class="link">已有账号？前往登录</a>
             </div>
         </div>
     </div>
 
-    <script src="js/config.js?v=6"></script>
+    <script src="js/config.js?v=7"></script>
     <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=9"></script>
-    <script src="js/ui.js?v=8"></script>
+    <script src="js/netdisk.js?v=11"></script>
+    <script src="js/ui.js?v=18"></script>
     <script>
         if (!CONFIG.isConfigured()) {
-            window.location.href = 'setup.html';
+            window.location.href = 'login.html';
         }
 
         document.getElementById('register-form').addEventListener('submit', async (e) => {
@@ -76,15 +91,43 @@
                 const result = await Netdisk.register(username, email, password);
                 UI.hideLoading();
 
-                // 显示成功提示
+                // 显示验证码输入框
+                document.getElementById('register-form').style.display = 'none';
+                document.getElementById('verify-section').style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = '注册';
+            } catch (error) {
+                UI.hideLoading();
+                UI.showMessage(error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = '注册';
+            }
+        });
+
+        // 验证邮箱
+        document.getElementById('verify-btn').addEventListener('click', async () => {
+            const code = document.getElementById('verify-code').value.trim();
+            if (!code) {
+                UI.showMessage('请输入验证码', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('verify-btn');
+            btn.disabled = true;
+            btn.textContent = '验证中...';
+
+            try {
+                UI.showLoading('验证中...');
+                const result = await Netdisk.verifyEmail(code);
+                UI.hideLoading();
+                UI.showMessage(result.message, 'success');
                 document.querySelector('.auth-card').innerHTML = `
                     <div class="auth-logo">
                         <h1>GitHub Netdisk</h1>
                     </div>
                     <div class="alert alert-success">
-                        <strong>注册成功！</strong><br>
-                        验证邮件已发送到 <strong>${UI.escapeHtml(email)}</strong><br>
-                        请查收邮件并点击验证链接完成验证。
+                        <strong>邮箱验证成功！</strong><br>
+                        现在可以登录了。
                     </div>
                     <div class="mt-24 text-center">
                         <a href="login.html" class="btn btn-secondary">前往登录</a>
@@ -94,7 +137,22 @@
                 UI.hideLoading();
                 UI.showMessage(error.message, 'error');
                 btn.disabled = false;
-                btn.textContent = '注册';
+                btn.textContent = '验证邮箱';
+            }
+        });
+
+        // 重新发送验证码
+        document.getElementById('resend-code-link').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            try {
+                UI.showLoading('发送中...');
+                const result = await Netdisk.resendVerificationCode(email);
+                UI.hideLoading();
+                UI.showMessage(result.message, 'success');
+            } catch (error) {
+                UI.hideLoading();
+                UI.showMessage(error.message, 'error');
             }
         });
     </script>

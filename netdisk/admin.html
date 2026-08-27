@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理后台 - GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=16">
+    <link rel="stylesheet" href="css/style.css?v=17">
     <style>
         .admin-tabs {
             display: flex;
@@ -73,6 +73,7 @@
             font-weight: 500;
         }
         .role-admin { background: #FEF3C7; color: #92400E; }
+        .role-superadmin { background: #FEE2E2; color: #991B1B; }
         .role-user { background: #E5E7EB; color: #374151; }
         .admin-actions {
             display: flex;
@@ -117,6 +118,7 @@
                     <div class="user-avatar" id="user-avatar">A</div>
                     <span id="user-name">管理员</span>
                 </div>
+                <button class="btn btn-secondary btn-sm" id="account-btn">账户设置</button>
                 <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
             </div>
         </div>
@@ -152,8 +154,8 @@
 
     <script src="js/config.js?v=6"></script>
     <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=8"></script>
-    <script src="js/ui.js?v=16"></script>
+    <script src="js/netdisk.js?v=9"></script>
+    <script src="js/ui.js?v=17"></script>
     <script>
         const Admin = {
             currentUser: null,
@@ -198,6 +200,11 @@
                     window.location.href = 'login.html';
                 });
 
+                // 账户设置
+                document.getElementById('account-btn').addEventListener('click', () => {
+                    window.location.href = 'account.html';
+                });
+
                 await this.loadUsers();
             },
 
@@ -209,6 +216,27 @@
 
                 if (tab === 'users') this.loadUsers();
                 if (tab === 'files') this.loadFiles();
+            },
+
+            // 判断当前用户是否有权限操作目标用户
+            // 权限规则：
+            // - 超级管理员：可操作普通用户和管理员，不能操作超级管理员
+            // - 管理员：只能操作普通用户，不能操作管理员和超级管理员
+            // - 超级管理员永不被操作
+            canOperateUser(targetUser) {
+                const currentRole = this.currentUser ? this.currentUser.role : 'user';
+                const targetRole = targetUser.role || 'user';
+
+                // 不能操作自己
+                if (this.currentUser && this.currentUser.id === targetUser.id) return false;
+                // 超级管理员永不被操作
+                if (targetRole === 'superadmin') return false;
+                // 超级管理员可以操作普通用户和管理员
+                if (currentRole === 'superadmin') return true;
+                // 管理员只能操作普通用户
+                if (currentRole === 'admin') return targetRole === 'user';
+                // 普通用户无操作权限
+                return false;
             },
 
             async loadUsers() {
@@ -228,6 +256,7 @@
                         'deleted': '<span class="status-badge status-deleted">已注销</span>'
                     };
                     const roleMap = {
+                        'superadmin': '<span class="role-badge role-superadmin">超级管理员</span>',
                         'admin': '<span class="role-badge role-admin">管理员</span>',
                         'user': '<span class="role-badge role-user">用户</span>'
                     };
@@ -254,7 +283,7 @@
                                         <td>${UI.formatDate(u.createdAt)}</td>
                                         <td>
                                             <div class="admin-actions">
-                                                ${u.role !== 'admin' ? `
+                                                ${this.canOperateUser(u) ? `
                                                     ${u.status !== 'disabled' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.disableUser('${u.id}')">禁用</button>` : ''}
                                                     ${u.status !== 'frozen' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.freezeUser('${u.id}')">冻结</button>` : ''}
                                                     <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${u.id}')">注销</button>

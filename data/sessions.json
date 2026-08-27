@@ -11,6 +11,12 @@
       "userId": "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
       "createdAt": "2026-08-27T08:41:54.251Z",
       "expiresAt": "2026-09-03T08:41:54.251Z"
+    },
+    {
+      "token": "0fbfc4aaffbad83acb6323c7d48141479c8fd0efa6d96c6da081d8cc787f78ab",
+      "userId": "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
+      "createdAt": "2026-08-27T08:52:01.726Z",
+      "expiresAt": "2026-09-03T08:52:01.726Z"
     }
   ]
 }

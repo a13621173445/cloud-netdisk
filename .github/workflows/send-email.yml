@@ -1,0 +1,23 @@
+name: Send Email
+
+on:
+  repository_dispatch:
+    types: [send-email]
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send email via SMTP
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: ${{ secrets.SMTP_FROM }}
+          to: ${{ github.event.client_payload.to }}
+          subject: ${{ github.event.client_payload.subject }}
+          body: ${{ github.event.client_payload.body }}
+          content_type: html
+          convert_markdown: false

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=11">
+    <link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -86,7 +86,7 @@
     <script src="js/config.js?v=5"></script>
     <script src="js/github.js?v=5"></script>
     <script src="js/netdisk.js?v=6"></script>
-    <script src="js/ui.js?v=10"></script>
+    <script src="js/ui.js?v=12"></script>
     <script>
         const App = {
             currentUser: null,
@@ -99,11 +99,21 @@
                     return;
                 }
 
-                // 检查登录
-                this.currentUser = await Netdisk.getCurrentUser();
+                // 检查登录（优先用本地缓存，避免网络异常导致显示异常）
+                this.currentUser = Netdisk.getCurrentUserLocal();
                 if (!this.currentUser) {
                     window.location.href = 'login.html';
                     return;
+                }
+
+                // 尝试从服务端获取最新用户信息（失败则用本地缓存）
+                try {
+                    const serverUser = await Netdisk.getCurrentUser();
+                    if (serverUser) {
+                        this.currentUser = serverUser;
+                    }
+                } catch (e) {
+                    // 网络异常时使用本地缓存
                 }
 
                 // 显示用户信息

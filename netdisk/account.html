@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - GitHub Netdisk</title>
+    <link rel="stylesheet" href="css/style.css?v=11">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <div class="navbar-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <span id="user-name">用户</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="account-btn">用户管理</button>
+                <button class="btn btn-secondary btn-sm" id="admin-btn" style="display: none;">管理后台</button>
+                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container dashboard">
+        <div class="dashboard-header">
+            <h2>用户管理</h2>
+            <a href="index.html" class="btn btn-secondary btn-sm">返回网盘</a>
+        </div>
+
+        <!-- 当前用户信息 -->
+        <div class="account-card">
+            <h3>账户信息</h3>
+            <div class="account-info">
+                <div class="account-row">
+                    <span class="account-label">用户名</span>
+                    <span class="account-value" id="info-username">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">邮箱</span>
+                    <span class="account-value" id="info-email">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">邮箱验证</span>
+                    <span class="account-value" id="info-verified">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">角色</span>
+                    <span class="account-value" id="info-role">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 修改密码 -->
+        <div class="account-card">
+            <h3>修改密码</h3>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="old-pwd" placeholder="输入当前密码">
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" id="new-pwd" placeholder="至少 6 个字符">
+            </div>
+            <div class="form-group">
+                <label>确认新密码</label>
+                <input type="password" id="confirm-new-pwd" placeholder="再次输入新密码">
+            </div>
+            <button class="btn btn-primary" id="change-pwd-btn">确认修改密码</button>
+        </div>
+
+        <!-- 修改邮箱 -->
+        <div class="account-card">
+            <h3>修改邮箱</h3>
+            <div class="form-group">
+                <label>新邮箱</label>
+                <input type="email" id="new-email" placeholder="输入新邮箱地址">
+            </div>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="email-pwd" placeholder="输入当前密码以确认操作">
+            </div>
+            <button class="btn btn-primary" id="change-email-btn">确认修改邮箱</button>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=5"></script>
+    <script src="js/github.js?v=5"></script>
+    <script src="js/netdisk.js?v=6"></script>
+    <script src="js/ui.js?v=11"></script>
+    <script>
+        const Account = {
+            currentUser: null,
+
+            async init() {
+                // 检查配置
+                if (!CONFIG.isConfigured()) {
+                    window.location.href = 'setup.html';
+                    return;
+                }
+
+                // 检查登录
+                this.currentUser = await Netdisk.getCurrentUser();
+                if (!this.currentUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 显示用户信息
+                document.getElementById('user-name').textContent = this.currentUser.username;
+                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                // 管理员显示管理后台入口
+                if (this.currentUser.role === 'admin') {
+                    document.getElementById('admin-btn').style.display = 'inline-flex';
+                }
+
+                // 显示账户信息
+                this.displayAccountInfo();
+
+                // 绑定事件
+                this.bindEvents();
+            },
+
+            displayAccountInfo() {
+                document.getElementById('info-username').textContent = this.currentUser.username;
+                document.getElementById('info-email').textContent = this.currentUser.email;
+                document.getElementById('info-verified').textContent = this.currentUser.verified ? '已验证' : '未验证';
+                document.getElementById('info-role').textContent = this.currentUser.role === 'admin' ? '管理员' : '普通用户';
+            },
+
+            bindEvents() {
+                // 退出登录
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await Netdisk.logout();
+                    window.location.href = 'login.html';
+                });
+
+                // 管理后台
+                document.getElementById('admin-btn').addEventListener('click', () => {
+                    window.location.href = 'admin.html';
+                });
+
+                // 用户管理（当前页）
+                document.getElementById('account-btn').addEventListener('click', () => {
+                    window.location.href = 'account.html';
+                });
+
+                // 修改密码
+                document.getElementById('change-pwd-btn').addEventListener('click', async () => {
+                    const oldPwd = document.getElementById('old-pwd').value;
+                    const newPwd = document.getElementById('new-pwd').value;
+                    const confirmPwd = document.getElementById('confirm-new-pwd').value;
+
+                    if (!oldPwd || !newPwd || !confirmPwd) {
+                        UI.showMessage('请填写所有字段', 'warning');
+                        return;
+                    }
+                    if (newPwd !== confirmPwd) {
+                        UI.showMessage('两次新密码不一致', 'error');
+                        return;
+                    }
+
+                    try {
+                        UI.showLoading('修改中...');
+                        await Netdisk.changePassword(oldPwd, newPwd);
+                        UI.hideLoading();
+                        UI.showMessage('密码修改成功', 'success');
+                        document.getElementById('old-pwd').value = '';
+                        document.getElementById('new-pwd').value = '';
+                        document.getElementById('confirm-new-pwd').value = '';
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 修改邮箱
+                document.getElementById('change-email-btn').addEventListener('click', async () => {
+                    const newEmail = document.getElementById('new-email').value;
+                    const password = document.getElementById('email-pwd').value;
+
+                    if (!newEmail || !password) {
+                        UI.showMessage('请填写所有字段', 'warning');
+                        return;
+                    }
+
+                    try {
+                        UI.showLoading('修改中...');
+                        const result = await Netdisk.changeEmail(newEmail, password);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        document.getElementById('new-email').value = '';
+                        document.getElementById('email-pwd').value = '';
+                        // 刷新账户信息
+                        this.currentUser = await Netdisk.getCurrentUser();
+                        if (this.currentUser) {
+                            this.displayAccountInfo();
+                        }
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+            }
+        };
+
+        Account.init();
+    </script>
+</body>
+</html>

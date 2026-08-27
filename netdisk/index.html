@@ -93,6 +93,12 @@
             fileInput: null,
 
             async init() {
+                // 检查 EULA 协议
+                if (!localStorage.getItem('netdisk_eula_agreed')) {
+                    window.location.href = 'eula.html';
+                    return;
+                }
+
                 // 检查配置
                 if (!(await CONFIG.isConfigured())) {
                     window.location.href = 'login.html';

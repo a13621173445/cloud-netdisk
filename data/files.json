@@ -8,8 +8,12 @@
       "path": "storage/c09c23b3-5f66-48f4-adea-63100ec5e742_2b2t.fun____kit__.png",
       "ownerId": "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
       "shared": true,
-      "shareToken": "ce7b3e55e1181ca7009698e54a6ea1f55336b96c14e9c095c72173726a0f38bb",
-      "uploadedAt": "2026-08-27T08:38:18.110Z"
+      "shareToken": "4596abfb9ba0a6f0868f92a7cedb8e903f949c74699ea05c7f47f4b9f89b1124",
+      "uploadedAt": "2026-08-27T08:38:18.110Z",
+      "shareExpireDays": 1,
+      "shareExpireAt": "2026-08-28T09:39:10.956Z",
+      "shareMaxDownloads": 2,
+      "shareDownloadCount": 0
     }
   ]
 }

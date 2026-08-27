@@ -126,7 +126,7 @@ const UI = {
 
     async checkAuth() {
         if (!CONFIG.isConfigured()) {
-            window.location.href = 'setup.html';
+            window.location.href = 'login.html';
             return false;
         }
 
@@ -149,7 +149,7 @@ const UI = {
 
     checkConfig() {
         if (!CONFIG.isConfigured()) {
-            window.location.href = 'setup.html';
+            window.location.href = 'login.html';
             return false;
         }
         return true;

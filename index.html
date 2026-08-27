@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Netdisk</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <div class="navbar-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <span id="user-name">用户</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="pwd-btn">修改密码</button>
+                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container dashboard">
+        <div class="dashboard-header">
+            <h2>我的文件</h2>
+            <button class="btn btn-primary btn-sm" id="upload-btn">上传文件</button>
+        </div>
+
+        <!-- 上传区域 -->
+        <div class="upload-area" id="upload-area">
+            <div class="upload-icon">📤</div>
+            <p>点击此处或拖拽文件到此处上传</p>
+            <div class="upload-limit">最大支持 50MB</div>
+        </div>
+
+        <!-- 文件列表 -->
+        <div class="file-list" id="file-list">
+            <div class="empty-state">
+                <div class="empty-icon">📁</div>
+                <p>加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件选择 -->
+    <input type="file" id="file-input" style="display: none;">
+
+    <!-- 分享模态框 -->
+    <div class="modal-overlay" id="share-modal" style="display: none;">
+        <div class="modal">
+            <h3>分享文件</h3>
+            <div class="modal-body">
+                <p class="text-muted" style="margin-bottom: 12px;">复制以下链接分享给他人，任何人都可以通过此链接下载文件。</p>
+                <div class="share-link-box">
+                    <input type="text" id="share-url" readonly>
+                    <button class="btn btn-primary btn-sm" id="copy-share-btn">复制</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="close-share-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密码模态框 -->
+    <div class="modal-overlay" id="pwd-modal" style="display: none;">
+        <div class="modal">
+            <h3>修改密码</h3>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>当前密码</label>
+                    <input type="password" id="old-pwd" placeholder="输入当前密码">
+                </div>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="new-pwd" placeholder="至少 6 个字符">
+                </div>
+                <div class="form-group">
+                    <label>确认新密码</label>
+                    <input type="password" id="confirm-new-pwd" placeholder="再次输入新密码">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="close-pwd-btn">取消</button>
+                <button class="btn btn-primary btn-sm" id="change-pwd-btn">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/github.js"></script>
+    <script src="js/netdisk.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+        const App = {
+            currentUser: null,
+            fileInput: null,
+
+            async init() {
+                // 检查配置
+                if (!CONFIG.isConfigured()) {
+                    window.location.href = 'setup.html';
+                    return;
+                }
+
+                // 检查登录
+                this.currentUser = await Netdisk.getCurrentUser();
+                if (!this.currentUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 显示用户信息
+                document.getElementById('user-name').textContent = this.currentUser.username;
+                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                // 初始化上传
+                this.initUpload();
+
+                // 加载文件列表
+                await this.loadFiles();
+
+                // 绑定事件
+                this.bindEvents();
+            },
+
+            initUpload() {
+                this.fileInput = document.getElementById('file-input');
+                const uploadArea = document.getElementById('upload-area');
+
+                // 点击上传
+                uploadArea.addEventListener('click', () => {
+                    this.fileInput.click();
+                });
+
+                // 文件选择
+                this.fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.uploadFile(e.target.files[0]);
+                        e.target.value = '';
+                    }
+                });
+
+                // 拖拽上传
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        this.uploadFile(e.dataTransfer.files[0]);
+                    }
+                });
+            },
+
+            async uploadFile(file) {
+                try {
+                    UI.showLoading(`上传中: ${file.name}`);
+                    await Netdisk.uploadFile(file);
+                    UI.hideLoading();
+                    UI.showMessage('文件上传成功', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async loadFiles() {
+                try {
+                    const files = await Netdisk.listFiles();
+                    UI.renderFileList(files, document.getElementById('file-list'));
+                } catch (error) {
+                    UI.showMessage('加载文件列表失败: ' + error.message, 'error');
+                }
+            },
+
+            async downloadFile(fileId) {
+                try {
+                    UI.showLoading('准备下载...');
+                    const result = await Netdisk.downloadFile(fileId);
+                    UI.hideLoading();
+
+                    // 创建下载链接
+                    const a = document.createElement('a');
+                    a.href = result.url;
+                    a.download = result.name;
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async shareFile(fileId) {
+                try {
+                    UI.showLoading('生成分享链接...');
+                    const result = await Netdisk.createShareLink(fileId);
+                    UI.hideLoading();
+
+                    document.getElementById('share-url').value = result.shareUrl;
+                    document.getElementById('share-modal').style.display = 'flex';
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async deleteFile(fileId) {
+                if (!confirm('确定要删除此文件吗？删除后不可恢复。')) return;
+
+                try {
+                    UI.showLoading('删除中...');
+                    await Netdisk.deleteFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已删除', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            bindEvents() {
+                // 退出登录
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await Netdisk.logout();
+                    window.location.href = 'login.html';
+                });
+
+                // 上传按钮
+                document.getElementById('upload-btn').addEventListener('click', () => {
+                    this.fileInput.click();
+                });
+
+                // 分享模态框
+                document.getElementById('close-share-btn').addEventListener('click', () => {
+                    document.getElementById('share-modal').style.display = 'none';
+                });
+
+                document.getElementById('copy-share-btn').addEventListener('click', () => {
+                    const input = document.getElementById('share-url');
+                    UI.copyToClipboard(input.value);
+                });
+
+                // 修改密码
+                document.getElementById('pwd-btn').addEventListener('click', () => {
+                    document.getElementById('pwd-modal').style.display = 'flex';
+                });
+
+                document.getElementById('close-pwd-btn').addEventListener('click', () => {
+                    document.getElementById('pwd-modal').style.display = 'none';
+                    document.getElementById('old-pwd').value = '';
+                    document.getElementById('new-pwd').value = '';
+                    document.getElementById('confirm-new-pwd').value = '';
+                });
+
+                document.getElementById('change-pwd-btn').addEventListener('click', async () => {
+                    const oldPwd = document.getElementById('old-pwd').value;
+                    const newPwd = document.getElementById('new-pwd').value;
+                    const confirmPwd = document.getElementById('confirm-new-pwd').value;
+
+                    if (!oldPwd || !newPwd || !confirmPwd) {
+                        UI.showMessage('请填写所有字段', 'warning');
+                        return;
+                    }
+                    if (newPwd !== confirmPwd) {
+                        UI.showMessage('两次新密码不一致', 'error');
+                        return;
+                    }
+
+                    try {
+                        UI.showLoading('修改中...');
+                        await Netdisk.changePassword(oldPwd, newPwd);
+                        UI.hideLoading();
+                        UI.showMessage('密码修改成功', 'success');
+                        document.getElementById('pwd-modal').style.display = 'none';
+                        document.getElementById('old-pwd').value = '';
+                        document.getElementById('new-pwd').value = '';
+                        document.getElementById('confirm-new-pwd').value = '';
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+            }
+        };
+
+        App.init();
+    </script>
+</body>
+</html>

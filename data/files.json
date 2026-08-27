@@ -7,8 +7,8 @@
       "type": "image/png",
       "path": "storage/c09c23b3-5f66-48f4-adea-63100ec5e742_2b2t.fun____kit__.png",
       "ownerId": "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
-      "shared": false,
-      "shareToken": null,
+      "shared": true,
+      "shareToken": "dea9e7e952fbde6c6ec70eaf99029d88d18611c0ebdad80e0bfceb4e2d4b128c",
       "uploadedAt": "2026-08-27T08:38:18.110Z"
     }
   ]

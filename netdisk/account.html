@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>账户设置 - GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=16">
+    <link rel="stylesheet" href="css/style.css?v=17">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -101,12 +101,30 @@
             </div>
             <button class="btn btn-primary" id="change-email-btn">确认修改邮箱</button>
         </div>
+
+        <!-- 申请解冻/解禁 -->
+        <div class="account-card" id="unfreeze-card" style="display: none;">
+            <h3>申请解冻/解禁</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">你的账户当前处于冻结或禁用状态，可以提交解冻申请，等待管理员处理。</p>
+            <button class="btn btn-primary" id="request-unfreeze-btn">提交解冻申请</button>
+        </div>
+
+        <!-- 注销账户 -->
+        <div class="account-card">
+            <h3>注销账户</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">注销后账户及所有文件将被永久删除，此操作不可恢复！</p>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="delete-account-pwd" placeholder="输入当前密码以确认注销">
+            </div>
+            <button class="btn btn-danger" id="delete-account-btn">注销账户</button>
+        </div>
     </div>
 
     <script src="js/config.js?v=6"></script>
     <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=8"></script>
-    <script src="js/ui.js?v=16"></script>
+    <script src="js/netdisk.js?v=9"></script>
+    <script src="js/ui.js?v=17"></script>
     <script>
         const Account = {
             currentUser: null,
@@ -165,6 +183,13 @@
                 document.getElementById('info-verified').textContent = this.currentUser.verified ? '已验证' : '未验证';
                 const role = this.currentUser.role;
                 document.getElementById('info-role').textContent = role === 'superadmin' ? '超级管理员' : (role === 'admin' ? '管理员' : '普通用户');
+
+                // 根据账户状态显示/隐藏申请解冻卡片
+                const status = this.currentUser.status || 'active';
+                const unfreezeCard = document.getElementById('unfreeze-card');
+                if (unfreezeCard) {
+                    unfreezeCard.style.display = (status === 'frozen' || status === 'disabled') ? 'block' : 'none';
+                }
             },
 
             // 加载用户列表（用于管理员设置）
@@ -309,6 +334,42 @@
                         if (this.currentUser) {
                             this.displayAccountInfo();
                         }
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 提交解冻申请
+                document.getElementById('request-unfreeze-btn').addEventListener('click', async () => {
+                    try {
+                        UI.showLoading('提交中...');
+                        const result = await Netdisk.requestUnfreeze();
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 注销账户
+                document.getElementById('delete-account-btn').addEventListener('click', async () => {
+                    const password = document.getElementById('delete-account-pwd').value;
+                    if (!password) {
+                        UI.showMessage('请输入当前密码以确认注销', 'warning');
+                        return;
+                    }
+
+                    const confirmed = await UI.confirm('确定要注销账户吗？账户及所有文件将被永久删除，此操作不可恢复！', '注销账户', '注销', '取消');
+                    if (!confirmed) return;
+
+                    try {
+                        UI.showLoading('注销中...');
+                        const result = await Netdisk.deleteMyAccount(password);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        setTimeout(() => window.location.href = 'login.html', 1500);
                     } catch (error) {
                         UI.hideLoading();
                         UI.showMessage(error.message, 'error');

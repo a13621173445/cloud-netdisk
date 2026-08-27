@@ -190,6 +190,27 @@ body {
     text-decoration: none;
 }
 
+.navbar-sponsor {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    margin-left: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--primary);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.navbar-sponsor:hover {
+    background: var(--primary-hover);
+    color: #fff;
+    text-decoration: none;
+}
+
 .navbar-right {
     display: flex;
     align-items: center;

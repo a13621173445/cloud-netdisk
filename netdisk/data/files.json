@@ -22,9 +22,13 @@
       "type": "image/png",
       "path": "netdisk/storage/0a34da89-6fa1-4f2a-ab53-ba2cc8a33789_Image_1787825347753_745.png",
       "ownerId": "0d73d724-700e-4241-8804-51cca19e90a7",
-      "shared": false,
-      "shareToken": null,
-      "uploadedAt": "2026-08-27T22:32:31.496Z"
+      "shared": true,
+      "shareToken": "444635ecd6bd3bea326b9e2e5f5cea552b0698d7a51285b941387c948b259f38",
+      "uploadedAt": "2026-08-27T22:32:31.496Z",
+      "shareExpireDays": -1,
+      "shareExpireAt": null,
+      "shareMaxDownloads": -1,
+      "shareDownloadCount": 0
     }
   ]
 }

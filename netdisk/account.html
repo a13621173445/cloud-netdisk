@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>账户设置 - GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=17">
+    <link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -112,19 +112,24 @@
         <!-- 注销账户 -->
         <div class="account-card">
             <h3>注销账户</h3>
-            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">注销后账户及所有文件将被永久删除，此操作不可恢复！</p>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">注销后账户及所有文件将被永久删除，此操作不可恢复！需要密码和邮箱验证码双重确认。</p>
             <div class="form-group">
                 <label>当前密码</label>
-                <input type="password" id="delete-account-pwd" placeholder="输入当前密码以确认注销">
+                <input type="password" id="delete-account-pwd" placeholder="输入当前密码">
             </div>
+            <div class="form-group">
+                <label>邮箱验证码</label>
+                <input type="text" id="delete-account-code" placeholder="先获取验证码，再输入确认注销" maxlength="6" style="letter-spacing: 4px; text-align: center; font-size: 18px;">
+            </div>
+            <button class="btn btn-secondary" id="send-delete-code-btn" style="margin-bottom: 8px;">获取注销验证码</button>
             <button class="btn btn-danger" id="delete-account-btn">注销账户</button>
         </div>
     </div>
 
-    <script src="js/config.js?v=6"></script>
+    <script src="js/config.js?v=7"></script>
     <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=9"></script>
-    <script src="js/ui.js?v=17"></script>
+    <script src="js/netdisk.js?v=11"></script>
+    <script src="js/ui.js?v=18"></script>
     <script>
         const Account = {
             currentUser: null,
@@ -132,7 +137,7 @@
             async init() {
                 // 检查配置
                 if (!CONFIG.isConfigured()) {
-                    window.location.href = 'setup.html';
+                    window.location.href = 'login.html';
                     return;
                 }
 
@@ -353,11 +358,29 @@
                     }
                 });
 
+                // 获取注销验证码
+                document.getElementById('send-delete-code-btn').addEventListener('click', async () => {
+                    try {
+                        UI.showLoading('发送中...');
+                        const result = await Netdisk.sendDeleteAccountCode();
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
                 // 注销账户
                 document.getElementById('delete-account-btn').addEventListener('click', async () => {
                     const password = document.getElementById('delete-account-pwd').value;
+                    const code = document.getElementById('delete-account-code').value.trim();
                     if (!password) {
-                        UI.showMessage('请输入当前密码以确认注销', 'warning');
+                        UI.showMessage('请输入当前密码', 'warning');
+                        return;
+                    }
+                    if (!code) {
+                        UI.showMessage('请先获取验证码并输入', 'warning');
                         return;
                     }
 
@@ -366,7 +389,7 @@
 
                     try {
                         UI.showLoading('注销中...');
-                        const result = await Netdisk.deleteMyAccount(password);
+                        const result = await Netdisk.deleteMyAccount(password, code);
                         UI.hideLoading();
                         UI.showMessage(result.message, 'success');
                         setTimeout(() => window.location.href = 'login.html', 1500);

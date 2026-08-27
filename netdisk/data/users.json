@@ -41,15 +41,15 @@
       "passwordHash": "646df41bb7150401aae2c8b4da8173833ec74b0928da1ad8128ece058544a3f9",
       "salt": "a47b4bd29f76dd0712141e4b3c3090c0",
       "role": "user",
-      "status": "disabled",
+      "status": "active",
       "verified": true,
       "verificationCode": null,
       "verificationCodeExpiry": null,
       "resetToken": null,
       "resetTokenExpiry": null,
       "createdAt": "2026-08-27T23:11:20.948Z",
-      "statusReason": "测试",
-      "statusUpdatedAt": "2026-08-27T23:13:42.644Z",
+      "statusReason": "",
+      "statusUpdatedAt": "2026-08-27T23:15:02.797Z",
       "statusUpdatedBy": "a13621173445"
     }
   ]

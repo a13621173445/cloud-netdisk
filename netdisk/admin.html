@@ -424,6 +424,7 @@
                                     <th>角色</th>
                                     <th>当前状态</th>
                                     <th>冻结原因</th>
+                                    <th>申请原因</th>
                                     <th>申请时间</th>
                                     <th>操作</th>
                                 </tr>
@@ -436,6 +437,7 @@
                                         <td>${r.role === 'superadmin' ? '超级管理员' : (r.role === 'admin' ? '管理员' : '用户')}</td>
                                         <td>${r.status === 'frozen' ? '已冻结' : (r.status === 'disabled' ? '已禁用' : '正常')}</td>
                                         <td>${UI.escapeHtml(r.statusReason || '无')}</td>
+                                        <td style="max-width:200px;word-break:break-all;">${UI.escapeHtml(r.unfreezeReason || '无')}</td>
                                         <td>${UI.formatDate(r.unfreezeRequestedAt)}</td>
                                         <td>
                                             <div class="admin-actions">

@@ -1,0 +1,399 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - GitHub Netdisk</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 12px;
+        }
+        .admin-tab {
+            padding: 10px 24px;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-light);
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+        .admin-tab.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .admin-tab:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .admin-table th, .admin-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .admin-table th {
+            background: var(--bg);
+            font-weight: 600;
+            color: var(--text);
+        }
+        .admin-table tr:hover {
+            background: var(--bg);
+        }
+        .status-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-active { background: #D1FAE5; color: #065F46; }
+        .status-disabled { background: #FEE2E2; color: #991B1B; }
+        .status-frozen { background: #DBEAFE; color: #1E40AF; }
+        .status-deleted { background: #F3F4F6; color: #6B7280; }
+        .status-normal { background: #D1FAE5; color: #065F46; }
+        .status-taken_down { background: #FEF3C7; color: #92400E; }
+        .role-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .role-admin { background: #FEF3C7; color: #92400E; }
+        .role-user { background: #E5E7EB; color: #374151; }
+        .admin-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .admin-actions .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .admin-header h2 {
+            font-size: 24px;
+        }
+        .back-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .empty-admin {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <div class="navbar-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">A</div>
+                    <span id="user-name">管理员</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container dashboard">
+        <div class="admin-header">
+            <h2>管理后台</h2>
+            <a href="index.html" class="back-link">← 返回网盘</a>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="admin-tabs">
+            <button class="admin-tab active" id="tab-users" onclick="Admin.switchTab('users')">用户管理</button>
+            <button class="admin-tab" id="tab-files" onclick="Admin.switchTab('files')">文件管理</button>
+        </div>
+
+        <!-- 用户管理 -->
+        <div id="panel-users">
+            <div id="users-container">
+                <div class="empty-admin">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 文件管理 -->
+        <div id="panel-files" style="display: none;">
+            <div id="files-container">
+                <div class="empty-admin">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=5"></script>
+    <script src="js/github.js?v=5"></script>
+    <script src="js/netdisk.js?v=5"></script>
+    <script src="js/ui.js?v=5"></script>
+    <script>
+        const Admin = {
+            currentUser: null,
+
+            async init() {
+                if (!CONFIG.isConfigured()) {
+                    window.location.href = 'setup.html';
+                    return;
+                }
+
+                this.currentUser = await Netdisk.getCurrentUser();
+                if (!this.currentUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 检查管理员权限
+                if (!Netdisk.isAdmin()) {
+                    UI.showMessage('无管理员权限', 'error');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                    return;
+                }
+
+                document.getElementById('user-name').textContent = this.currentUser.username;
+                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await Netdisk.logout();
+                    window.location.href = 'login.html';
+                });
+
+                await this.loadUsers();
+            },
+
+            switchTab(tab) {
+                document.getElementById('tab-users').classList.toggle('active', tab === 'users');
+                document.getElementById('tab-files').classList.toggle('active', tab === 'files');
+                document.getElementById('panel-users').style.display = tab === 'users' ? 'block' : 'none';
+                document.getElementById('panel-files').style.display = tab === 'files' ? 'block' : 'none';
+
+                if (tab === 'users') this.loadUsers();
+                if (tab === 'files') this.loadFiles();
+            },
+
+            async loadUsers() {
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const container = document.getElementById('users-container');
+
+                    if (!users || users.length === 0) {
+                        container.innerHTML = '<div class="empty-admin">暂无用户</div>';
+                        return;
+                    }
+
+                    const statusMap = {
+                        'active': '<span class="status-badge status-active">正常</span>',
+                        'disabled': '<span class="status-badge status-disabled">已禁用</span>',
+                        'frozen': '<span class="status-badge status-frozen">已冻结</span>',
+                        'deleted': '<span class="status-badge status-deleted">已注销</span>'
+                    };
+                    const roleMap = {
+                        'admin': '<span class="role-badge role-admin">管理员</span>',
+                        'user': '<span class="role-badge role-user">用户</span>'
+                    };
+
+                    container.innerHTML = `
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>用户名</th>
+                                    <th>邮箱</th>
+                                    <th>角色</th>
+                                    <th>状态</th>
+                                    <th>注册时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${users.map(u => `
+                                    <tr>
+                                        <td>${UI.escapeHtml(u.username)}</td>
+                                        <td>${UI.escapeHtml(u.email)}</td>
+                                        <td>${roleMap[u.role] || roleMap.user}</td>
+                                        <td>${statusMap[u.status] || statusMap.active}</td>
+                                        <td>${UI.formatDate(u.createdAt)}</td>
+                                        <td>
+                                            <div class="admin-actions">
+                                                ${u.role !== 'admin' ? `
+                                                    ${u.status !== 'disabled' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.disableUser('${u.id}')">禁用</button>` : ''}
+                                                    ${u.status !== 'frozen' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.freezeUser('${u.id}')">冻结</button>` : ''}
+                                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${u.id}')">注销</button>
+                                                ` : '<span style="color:#999;font-size:12px">—</span>'}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } catch (error) {
+                    document.getElementById('users-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
+                }
+            },
+
+            async loadFiles() {
+                try {
+                    const files = await Netdisk.adminListFiles();
+                    const container = document.getElementById('files-container');
+
+                    if (!files || files.length === 0) {
+                        container.innerHTML = '<div class="empty-admin">暂无文件</div>';
+                        return;
+                    }
+
+                    const statusMap = {
+                        'normal': '<span class="status-badge status-normal">正常</span>',
+                        'taken_down': '<span class="status-badge status-taken_down">已下架</span>'
+                    };
+
+                    container.innerHTML = `
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>所有者</th>
+                                    <th>大小</th>
+                                    <th>状态</th>
+                                    <th>上传时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${files.map(f => `
+                                    <tr>
+                                        <td>${UI.escapeHtml(f.name)}</td>
+                                        <td>${UI.escapeHtml(f.ownerName)}</td>
+                                        <td>${UI.formatFileSize(f.size)}</td>
+                                        <td>${statusMap[f.status] || statusMap.normal}</td>
+                                        <td>${UI.formatDate(f.uploadedAt)}</td>
+                                        <td>
+                                            <div class="admin-actions">
+                                                ${f.status !== 'taken_down' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.takeDownFile('${f.id}')">下架</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.restoreFile('${f.id}')">恢复</button>`}
+                                                <button class="btn btn-danger btn-sm" onclick="Admin.deleteFile('${f.id}')">删除</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } catch (error) {
+                    document.getElementById('files-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
+                }
+            },
+
+            async disableUser(userId) {
+                if (!confirm('确定要禁用该用户吗？禁用后该用户将无法登录。')) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminDisableUser(userId);
+                    UI.hideLoading();
+                    UI.showMessage('用户已禁用', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async freezeUser(userId) {
+                if (!confirm('确定要冻结该用户吗？冻结后该用户将无法登录，但数据会保留。')) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminFreezeUser(userId);
+                    UI.hideLoading();
+                    UI.showMessage('用户已冻结', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async deleteUser(userId) {
+                if (!confirm('确定要注销该用户吗？将删除该用户账户及其所有文件，此操作不可恢复！')) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminDeleteUser(userId);
+                    UI.hideLoading();
+                    UI.showMessage('用户已注销', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async takeDownFile(fileId) {
+                if (!confirm('确定要下架该文件吗？下架后分享链接将失效。')) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminTakeDownFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已下架', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async restoreFile(fileId) {
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminRestoreFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已恢复', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async deleteFile(fileId) {
+                if (!confirm('确定要删除该文件吗？此操作不可恢复！')) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminDeleteFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已删除', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            }
+        };
+
+        Admin.init();
+    </script>
+</body>
+</html>

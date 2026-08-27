@@ -159,6 +159,23 @@
         </div>
     </div>
 
+    <!-- 原因输入弹窗 -->
+    <div class="modal-overlay" id="reason-modal" style="display: none;">
+        <div class="modal">
+            <h3 id="reason-title">输入原因</h3>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label id="reason-label">原因（可为空）</label>
+                    <input type="text" id="reason-input" placeholder="输入原因..." style="width:100%;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="reason-cancel-btn">取消</button>
+                <button class="btn btn-primary" id="reason-confirm-btn">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=11"></script>
@@ -221,6 +238,37 @@
                 if (tab === 'users') this.loadUsers();
                 if (tab === 'files') this.loadFiles();
                 if (tab === 'unfreeze') this.loadUnfreezeRequests();
+            },
+
+            // 自定义输入弹窗，返回 Promise<string|null>
+            showPrompt(title, label, placeholder = '') {
+                return new Promise((resolve) => {
+                    document.getElementById('reason-title').textContent = title;
+                    document.getElementById('reason-label').textContent = label;
+                    document.getElementById('reason-input').value = '';
+                    document.getElementById('reason-input').placeholder = placeholder;
+                    document.getElementById('reason-modal').style.display = 'flex';
+                    document.getElementById('reason-input').focus();
+
+                    const confirmHandler = () => {
+                        document.getElementById('reason-modal').style.display = 'none';
+                        document.getElementById('reason-confirm-btn').removeEventListener('click', confirmHandler);
+                        document.getElementById('reason-cancel-btn').removeEventListener('click', cancelHandler);
+                        resolve(document.getElementById('reason-input').value);
+                    };
+                    const cancelHandler = () => {
+                        document.getElementById('reason-modal').style.display = 'none';
+                        document.getElementById('reason-confirm-btn').removeEventListener('click', confirmHandler);
+                        document.getElementById('reason-cancel-btn').removeEventListener('click', cancelHandler);
+                        resolve(null);
+                    };
+                    document.getElementById('reason-confirm-btn').addEventListener('click', confirmHandler);
+                    document.getElementById('reason-cancel-btn').addEventListener('click', cancelHandler);
+                    document.getElementById('reason-input').addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') confirmHandler();
+                        if (e.key === 'Escape') cancelHandler();
+                    });
+                });
             },
 
             // 判断当前用户是否有权限操作目标用户
@@ -436,7 +484,8 @@
             async disableUser(userId) {
                 const confirmed = await UI.confirm('确定要禁用该用户吗？禁用后该用户无法进行文件操作，但可以登录查看解禁信息。', '禁用用户', '禁用', '取消');
                 if (!confirmed) return;
-                const reason = prompt('请输入禁用原因（可为空）：', '');
+                const reason = await this.showPrompt('禁用用户', '禁用原因（可为空）', '输入原因...');
+                if (reason === null) return;
                 try {
                     UI.showLoading('处理中...');
                     await Netdisk.adminDisableUser(userId, reason || '');
@@ -452,7 +501,8 @@
             async freezeUser(userId) {
                 const confirmed = await UI.confirm('确定要冻结该用户吗？冻结后该用户将无法登录，且无法进行任何操作。', '冻结用户', '冻结', '取消');
                 if (!confirmed) return;
-                const reason = prompt('请输入冻结原因（可为空）：', '');
+                const reason = await this.showPrompt('冻结用户', '冻结原因（可为空）', '输入原因...');
+                if (reason === null) return;
                 try {
                     UI.showLoading('处理中...');
                     await Netdisk.adminFreezeUser(userId, reason || '');

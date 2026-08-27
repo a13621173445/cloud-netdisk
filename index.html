@@ -3,337 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Netdisk</title>
+    <title>frpz.cc</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .landing-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            background: var(--bg);
+        }
+        .landing-card {
+            max-width: 500px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 48px 40px;
+            text-align: center;
+        }
+        .landing-card h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        .landing-card p {
+            color: var(--text-light);
+            margin-bottom: 36px;
+            font-size: 15px;
+        }
+        .landing-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .landing-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 15px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .landing-btn:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .landing-btn.primary {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+        .landing-btn.primary:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+        .landing-btn-empty {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-light);
+            font-size: 15px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="navbar">
-        <div class="container">
-            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
-            <div class="navbar-right">
-                <div class="user-info">
-                    <div class="user-avatar" id="user-avatar">U</div>
-                    <span id="user-name">用户</span>
-                </div>
-                <button class="btn btn-secondary btn-sm" id="pwd-btn">修改密码</button>
-                <button class="btn btn-secondary btn-sm" id="admin-btn" style="display: none;">管理后台</button>
-                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
-            </div>
-        </div>
-    </nav>
+    <div class="landing-wrapper">
+        <div class="landing-card">
+            <h1>frpz.cc</h1>
+            <p>欢迎来到 frpz.cc</p>
 
-    <!-- 主内容 -->
-    <div class="container dashboard">
-        <div class="dashboard-header">
-            <h2>我的文件</h2>
-            <button class="btn btn-primary btn-sm" id="upload-btn">上传文件</button>
-        </div>
-
-        <!-- 上传区域 -->
-        <div class="upload-area" id="upload-area">
-            <div class="upload-icon">📤</div>
-            <p>点击此处或拖拽文件到此处上传</p>
-            <div class="upload-limit">最大支持 50MB</div>
-        </div>
-
-        <!-- 文件列表 -->
-        <div class="file-list" id="file-list">
-            <div class="empty-state">
-                <div class="empty-icon">📁</div>
-                <p>加载中...</p>
+            <div class="landing-buttons">
+                <a href="netdisk/index.html" class="landing-btn primary">进入网盘</a>
+                <div class="landing-btn-empty"></div>
+                <div class="landing-btn-empty"></div>
+                <div class="landing-btn-empty"></div>
+                <div class="landing-btn-empty"></div>
             </div>
         </div>
     </div>
-
-    <!-- 隐藏的文件选择 -->
-    <input type="file" id="file-input" style="display: none;">
-
-    <!-- 分享模态框 -->
-    <div class="modal-overlay" id="share-modal" style="display: none;">
-        <div class="modal">
-            <h3>分享文件</h3>
-            <div class="modal-body">
-                <div id="share-config">
-                    <p class="text-muted" style="margin-bottom: 12px;">设置分享限制，生成分享链接。</p>
-                    <div class="form-group">
-                        <label>有效期（天）</label>
-                        <input type="number" id="share-expire-days" value="-1" min="-1" placeholder="-1 表示无限制">
-                        <div class="hint">-1 表示无限制，其他值表示有效天数</div>
-                    </div>
-                    <div class="form-group">
-                        <label>下载次数限制</label>
-                        <input type="number" id="share-max-downloads" value="-1" min="-1" placeholder="-1 表示无限制">
-                        <div class="hint">-1 表示无限制，其他值表示最大下载次数</div>
-                    </div>
-                    <button class="btn btn-primary" id="generate-share-btn">生成分享链接</button>
-                </div>
-                <div id="share-result" style="display: none;">
-                    <p class="text-muted" style="margin-bottom: 12px;">复制以下链接分享给他人。</p>
-                    <div class="share-link-box">
-                        <input type="text" id="share-url" readonly>
-                        <button class="btn btn-primary btn-sm" id="copy-share-btn">复制</button>
-                    </div>
-                    <div id="share-limit-info" class="text-muted" style="margin-top: 8px; font-size: 13px;"></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" id="close-share-btn">关闭</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 修改密码模态框 -->
-    <div class="modal-overlay" id="pwd-modal" style="display: none;">
-        <div class="modal">
-            <h3>修改密码</h3>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>当前密码</label>
-                    <input type="password" id="old-pwd" placeholder="输入当前密码">
-                </div>
-                <div class="form-group">
-                    <label>新密码</label>
-                    <input type="password" id="new-pwd" placeholder="至少 6 个字符">
-                </div>
-                <div class="form-group">
-                    <label>确认新密码</label>
-                    <input type="password" id="confirm-new-pwd" placeholder="再次输入新密码">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" id="close-pwd-btn">取消</button>
-                <button class="btn btn-primary btn-sm" id="change-pwd-btn">确认修改</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="js/config.js?v=5"></script>
-    <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=5"></script>
-    <script src="js/ui.js?v=5"></script>
-    <script>
-        const App = {
-            currentUser: null,
-            fileInput: null,
-
-            async init() {
-                if (!CONFIG.isConfigured()) {
-                    window.location.href = 'setup.html';
-                    return;
-                }
-
-                this.currentUser = await Netdisk.getCurrentUser();
-                if (!this.currentUser) {
-                    window.location.href = 'login.html';
-                    return;
-                }
-
-                document.getElementById('user-name').textContent = this.currentUser.username;
-                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
-
-                if (this.currentUser.role === 'admin') {
-                    document.getElementById('admin-btn').style.display = 'inline-flex';
-                }
-
-                this.initUpload();
-                await this.loadFiles();
-                this.bindEvents();
-            },
-
-            initUpload() {
-                this.fileInput = document.getElementById('file-input');
-                const uploadArea = document.getElementById('upload-area');
-
-                uploadArea.addEventListener('click', () => {
-                    this.fileInput.click();
-                });
-
-                this.fileInput.addEventListener('change', (e) => {
-                    if (e.target.files.length > 0) {
-                        this.uploadFile(e.target.files[0]);
-                        e.target.value = '';
-                    }
-                });
-
-                uploadArea.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.add('dragover');
-                });
-
-                uploadArea.addEventListener('dragleave', () => {
-                    uploadArea.classList.remove('dragover');
-                });
-
-                uploadArea.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('dragover');
-                    if (e.dataTransfer.files.length > 0) {
-                        this.uploadFile(e.dataTransfer.files[0]);
-                    }
-                });
-            },
-
-            async uploadFile(file) {
-                try {
-                    UI.showLoading(`上传中: ${file.name}`);
-                    await Netdisk.uploadFile(file);
-                    UI.hideLoading();
-                    UI.showMessage('文件上传成功', 'success');
-                    await this.loadFiles();
-                } catch (error) {
-                    UI.hideLoading();
-                    UI.showMessage(error.message, 'error');
-                }
-            },
-
-            async loadFiles() {
-                try {
-                    const files = await Netdisk.listFiles();
-                    UI.renderFileList(files, document.getElementById('file-list'));
-                } catch (error) {
-                    UI.showMessage('加载文件列表失败: ' + error.message, 'error');
-                }
-            },
-
-            async downloadFile(fileId) {
-                try {
-                    UI.showLoading('准备下载...');
-                    const result = await Netdisk.downloadFile(fileId);
-                    UI.hideLoading();
-
-                    const a = document.createElement('a');
-                    a.href = result.url;
-                    a.download = result.name;
-                    a.target = '_blank';
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                } catch (error) {
-                    UI.hideLoading();
-                    UI.showMessage(error.message, 'error');
-                }
-            },
-
-            async shareFile(fileId) {
-                this.currentShareFileId = fileId;
-                document.getElementById('share-config').style.display = 'block';
-                document.getElementById('share-result').style.display = 'none';
-                document.getElementById('share-expire-days').value = '-1';
-                document.getElementById('share-max-downloads').value = '-1';
-                document.getElementById('share-modal').style.display = 'flex';
-            },
-
-            async generateShareLink() {
-                const fileId = this.currentShareFileId;
-                if (!fileId) return;
-
-                const expireDays = parseInt(document.getElementById('share-expire-days').value);
-                const maxDownloads = parseInt(document.getElementById('share-max-downloads').value);
-
-                try {
-                    UI.showLoading('生成分享链接...');
-                    const result = await Netdisk.createShareLink(fileId, expireDays, maxDownloads);
-                    UI.hideLoading();
-
-                    document.getElementById('share-url').value = result.shareUrl;
-                    document.getElementById('share-config').style.display = 'none';
-                    document.getElementById('share-result').style.display = 'block';
-
-                    const expireText = result.expireDays === -1 ? '无限制' : `${result.expireDays} 天`;
-                    const downloadText = result.maxDownloads === -1 ? '无限制' : `${result.maxDownloads} 次`;
-                    document.getElementById('share-limit-info').textContent = `有效期：${expireText}，下载次数：${downloadText}`;
-                } catch (error) {
-                    UI.hideLoading();
-                    UI.showMessage(error.message, 'error');
-                }
-            },
-
-            async deleteFile(fileId) {
-                if (!confirm('确定要删除此文件吗？删除后不可恢复。')) return;
-
-                try {
-                    UI.showLoading('删除中...');
-                    await Netdisk.deleteFile(fileId);
-                    UI.hideLoading();
-                    UI.showMessage('文件已删除', 'success');
-                    await this.loadFiles();
-                } catch (error) {
-                    UI.hideLoading();
-                    UI.showMessage(error.message, 'error');
-                }
-            },
-
-            bindEvents() {
-                document.getElementById('logout-btn').addEventListener('click', async () => {
-                    await Netdisk.logout();
-                    window.location.href = 'login.html';
-                });
-
-                document.getElementById('admin-btn').addEventListener('click', () => {
-                    window.location.href = 'admin.html';
-                });
-
-                document.getElementById('upload-btn').addEventListener('click', () => {
-                    this.fileInput.click();
-                });
-
-                document.getElementById('close-share-btn').addEventListener('click', () => {
-                    document.getElementById('share-modal').style.display = 'none';
-                });
-
-                document.getElementById('generate-share-btn').addEventListener('click', () => {
-                    this.generateShareLink();
-                });
-
-                document.getElementById('copy-share-btn').addEventListener('click', () => {
-                    const input = document.getElementById('share-url');
-                    UI.copyToClipboard(input.value);
-                });
-
-                document.getElementById('pwd-btn').addEventListener('click', () => {
-                    document.getElementById('pwd-modal').style.display = 'flex';
-                });
-
-                document.getElementById('close-pwd-btn').addEventListener('click', () => {
-                    document.getElementById('pwd-modal').style.display = 'none';
-                    document.getElementById('old-pwd').value = '';
-                    document.getElementById('new-pwd').value = '';
-                    document.getElementById('confirm-new-pwd').value = '';
-                });
-
-                document.getElementById('change-pwd-btn').addEventListener('click', async () => {
-                    const oldPwd = document.getElementById('old-pwd').value;
-                    const newPwd = document.getElementById('new-pwd').value;
-                    const confirmPwd = document.getElementById('confirm-new-pwd').value;
-
-                    if (!oldPwd || !newPwd || !confirmPwd) {
-                        UI.showMessage('请填写所有字段', 'warning');
-                        return;
-                    }
-                    if (newPwd !== confirmPwd) {
-                        UI.showMessage('两次新密码不一致', 'error');
-                        return;
-                    }
-
-                    try {
-                        UI.showLoading('修改中...');
-                        await Netdisk.changePassword(oldPwd, newPwd);
-                        UI.hideLoading();
-                        UI.showMessage('密码修改成功', 'success');
-                        document.getElementById('pwd-modal').style.display = 'none';
-                        document.getElementById('old-pwd').value = '';
-                        document.getElementById('new-pwd').value = '';
-                        document.getElementById('confirm-new-pwd').value = '';
-                    } catch (error) {
-                        UI.hideLoading();
-                        UI.showMessage(error.message, 'error');
-                    }
-                });
-            }
-        };
-
-        App.init();
-    </script>
 </body>
 </html>

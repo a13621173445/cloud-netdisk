@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=10">
+    <link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -16,7 +16,7 @@
                     <div class="user-avatar" id="user-avatar">U</div>
                     <span id="user-name">用户</span>
                 </div>
-                <button class="btn btn-secondary btn-sm" id="pwd-btn">修改密码</button>
+                <button class="btn btn-secondary btn-sm" id="account-btn">用户管理</button>
                 <button class="btn btn-secondary btn-sm" id="admin-btn" style="display: none;">管理后台</button>
                 <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
             </div>
@@ -83,34 +83,9 @@
         </div>
     </div>
 
-    <!-- 修改密码模态框 -->
-    <div class="modal-overlay" id="pwd-modal" style="display: none;">
-        <div class="modal">
-            <h3>修改密码</h3>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>当前密码</label>
-                    <input type="password" id="old-pwd" placeholder="输入当前密码">
-                </div>
-                <div class="form-group">
-                    <label>新密码</label>
-                    <input type="password" id="new-pwd" placeholder="至少 6 个字符">
-                </div>
-                <div class="form-group">
-                    <label>确认新密码</label>
-                    <input type="password" id="confirm-new-pwd" placeholder="再次输入新密码">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" id="close-pwd-btn">取消</button>
-                <button class="btn btn-primary btn-sm" id="change-pwd-btn">确认修改</button>
-            </div>
-        </div>
-    </div>
-
     <script src="js/config.js?v=5"></script>
     <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=5"></script>
+    <script src="js/netdisk.js?v=6"></script>
     <script src="js/ui.js?v=10"></script>
     <script>
         const App = {
@@ -292,6 +267,11 @@
                     window.location.href = 'admin.html';
                 });
 
+                // 用户管理
+                document.getElementById('account-btn').addEventListener('click', () => {
+                    window.location.href = 'account.html';
+                });
+
                 // 上传按钮
                 document.getElementById('upload-btn').addEventListener('click', () => {
                     this.fileInput.click();
@@ -309,47 +289,6 @@
                 document.getElementById('copy-share-btn').addEventListener('click', () => {
                     const input = document.getElementById('share-url');
                     UI.copyToClipboard(input.value);
-                });
-
-                // 修改密码
-                document.getElementById('pwd-btn').addEventListener('click', () => {
-                    document.getElementById('pwd-modal').style.display = 'flex';
-                });
-
-                document.getElementById('close-pwd-btn').addEventListener('click', () => {
-                    document.getElementById('pwd-modal').style.display = 'none';
-                    document.getElementById('old-pwd').value = '';
-                    document.getElementById('new-pwd').value = '';
-                    document.getElementById('confirm-new-pwd').value = '';
-                });
-
-                document.getElementById('change-pwd-btn').addEventListener('click', async () => {
-                    const oldPwd = document.getElementById('old-pwd').value;
-                    const newPwd = document.getElementById('new-pwd').value;
-                    const confirmPwd = document.getElementById('confirm-new-pwd').value;
-
-                    if (!oldPwd || !newPwd || !confirmPwd) {
-                        UI.showMessage('请填写所有字段', 'warning');
-                        return;
-                    }
-                    if (newPwd !== confirmPwd) {
-                        UI.showMessage('两次新密码不一致', 'error');
-                        return;
-                    }
-
-                    try {
-                        UI.showLoading('修改中...');
-                        await Netdisk.changePassword(oldPwd, newPwd);
-                        UI.hideLoading();
-                        UI.showMessage('密码修改成功', 'success');
-                        document.getElementById('pwd-modal').style.display = 'none';
-                        document.getElementById('old-pwd').value = '';
-                        document.getElementById('new-pwd').value = '';
-                        document.getElementById('confirm-new-pwd').value = '';
-                    } catch (error) {
-                        UI.hideLoading();
-                        UI.showMessage(error.message, 'error');
-                    }
                 });
             }
         };

@@ -197,7 +197,68 @@ const Netdisk = {
 
     // ============ 用户登录 ============
 
-    async login(email, password) {
+    // 获取客户端公网 IP（用于同一天同 IP 自动登录）
+    async getClientIp() {
+        try {
+            const response = await fetch('https://api.ipify.org?format=json');
+            const data = await response.json();
+            return data.ip || '';
+        } catch (e) {
+            return '';
+        }
+    },
+
+    // 获取今天的日期字符串（YYYY-MM-DD）
+    getTodayString() {
+        const now = new Date();
+        return now.toISOString().split('T')[0];
+    },
+
+    // 检查是否同一天同一 IP 已登录（用于自动登录）
+    async checkAutoLogin() {
+        const ip = await this.getClientIp();
+        if (!ip) return null;
+
+        const today = this.getTodayString();
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.SESSIONS);
+        const sessions = (data && data.sessions) || [];
+
+        // 查找同一天、同一 IP、未过期的会话
+        const session = sessions.find(s =>
+            s.ip === ip &&
+            s.lastLoginDate === today &&
+            new Date(s.expiresAt) > new Date()
+        );
+
+        if (!session) return null;
+
+        // 获取用户信息
+        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData.data && usersData.data.users) || [];
+        const user = users.find(u => u.id === session.userId);
+
+        if (!user) return null;
+        const status = user.status || 'active';
+        if (status !== 'active') return null;
+
+        // 自动登录成功，设置本地会话
+        localStorage.setItem('netdisk_session', session.token);
+        localStorage.setItem('netdisk_user', JSON.stringify({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            verified: user.verified,
+            role: user.role || 'user',
+            status: status
+        }));
+
+        return {
+            token: session.token,
+            user: { id: user.id, username: user.username, email: user.email, verified: user.verified, role: user.role || 'user', status: status }
+        };
+    },
+
+    async login(email, password, rememberMe = false) {
         if (!email || !password) throw new Error('请输入邮箱和密码');
 
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
@@ -215,13 +276,21 @@ const Netdisk = {
         if (status === 'frozen') throw new Error('该账户已被冻结，请联系管理员');
         if (status === 'deleted') throw new Error('该账户已注销，无法登录');
 
+        // 获取客户端 IP
+        const ip = await this.getClientIp();
+
         // 创建会话
+        // 记住我：30 天；否则：7 天
+        const sessionDuration = rememberMe ? 30 * 24 * 60 * 60 * 1000 : SESSION_DURATION;
         const sessionToken = generateToken();
         const session = {
             token: sessionToken,
             userId: user.id,
             createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + SESSION_DURATION).toISOString()
+            expiresAt: new Date(Date.now() + sessionDuration).toISOString(),
+            rememberMe: rememberMe,
+            ip: ip,
+            lastLoginDate: this.getTodayString()
         };
 
         await GitHubAPI.updateJsonData(
@@ -305,6 +374,32 @@ const Netdisk = {
         if (new Date(session.expiresAt) < new Date()) {
             this.logout();
             return null;
+        }
+
+        // 会话续期：如果剩余时间小于 14 天，续期 +7 天
+        const now = Date.now();
+        const expiresAt = new Date(session.expiresAt).getTime();
+        const remainingMs = expiresAt - now;
+        const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+
+        if (remainingMs < fourteenDays) {
+            const newExpiresAt = new Date(expiresAt + sevenDays).toISOString();
+            try {
+                await GitHubAPI.updateJsonData(
+                    CONFIG.DATA.SESSIONS,
+                    (data) => {
+                        if (!data.sessions) data.sessions = [];
+                        const s = data.sessions.find(x => x.token === token);
+                        if (s) s.expiresAt = newExpiresAt;
+                        return data;
+                    },
+                    '会话续期'
+                );
+                session.expiresAt = newExpiresAt;
+            } catch (e) {
+                // 续期失败不影响当前会话
+            }
         }
 
         // 获取用户信息

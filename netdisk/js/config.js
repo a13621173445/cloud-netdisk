@@ -5,7 +5,7 @@
  * 1. 修改下方 GITHUB_OWNER 为你的 GitHub 用户名
  * 2. 修改 REPO_NAME 为你的仓库名
  * 3. 修改 PAGES_BASE_URL 为你的 GitHub Pages 地址
- * 4. 访问 setup.html 配置 GitHub Token
+ * 4. 修改 TOKEN_KEY / TOKEN_IV / TOKEN_CIPHER 为你的 GitHub Token 的 AES 加密值
  * 5. 在 GitHub 仓库 Settings > Secrets 中配置 SMTP 邮件密钥
  */
 
@@ -18,6 +18,14 @@ const CONFIG = {
     // GitHub Pages 地址（用于生成验证链接、分享链接等）
     // 格式: https://USERNAME.github.io/REPO_NAME
     PAGES_BASE_URL: 'https://frpz.cc/netdisk',
+
+    // ============ GitHub Token（AES 加密存储） ============
+    // Token 使用 AES-256-GCM 加密后存储，运行时解密
+    // 生成方式：用工具将你的 GitHub Token 用 AES-256 加密，得到 KEY/IV/CIPHER
+    // 需要权限：repo (或 fine-grained: Contents Read/Write + Actions Write)
+    TOKEN_KEY: 'quv4oegGqKDDLHe4fnvO3c0uOdGrJQnQpMoAiFLY10s=',
+    TOKEN_IV: 'dEwyJ81UsLqe5zOCPQcdyg==',
+    TOKEN_CIPHER: 'kSAmgjQpznfLwlC15YoeMzZvgLeVaG+btlWVD2W9LDTcIIqaSEvhGl2683SvI5cx',
 
     // ============ 内部配置（一般不需要修改） ============
     API_BASE: 'https://api.github.com',
@@ -34,28 +42,61 @@ const CONFIG = {
     STORAGE_DIR: 'netdisk/storage',
 
     // ============ Token 管理 ============
-    // Token 存储在 localStorage 中，通过 setup.html 页面输入
-    // 需要权限：repo (或 fine-grained: Contents Read/Write + Actions Write)
+    // Token 使用 AES-256 加密存储在 TOKEN_KEY/TOKEN_IV/TOKEN_CIPHER 中
+    // 运行时通过 Web Crypto API 解密
 
-    getToken() {
-        return localStorage.getItem('netdisk_token') || '';
+    // Base64 转 Uint8Array
+    _base64ToBytes(b64) {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
     },
 
-    setToken(token) {
-        localStorage.setItem('netdisk_token', token);
+    // 解密 Token（AES-256-GCM）
+    async _decryptToken() {
+        try {
+            const keyBytes = this._base64ToBytes(this.TOKEN_KEY);
+            const ivBytes = this._base64ToBytes(this.TOKEN_IV);
+            const cipherBytes = this._base64ToBytes(this.TOKEN_CIPHER);
+
+            const key = await crypto.subtle.importKey(
+                'raw',
+                keyBytes,
+                { name: 'AES-GCM' },
+                false,
+                ['decrypt']
+            );
+
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: ivBytes },
+                key,
+                cipherBytes
+            );
+
+            return new TextDecoder().decode(decrypted);
+        } catch (e) {
+            console.error('Token 解密失败:', e);
+            return '';
+        }
     },
 
-    clearToken() {
-        localStorage.removeItem('netdisk_token');
+    // 获取 Token（异步解密）
+    async getToken() {
+        if (this._cachedToken) return this._cachedToken;
+        this._cachedToken = await this._decryptToken();
+        return this._cachedToken;
     },
 
-    // ============ 动态配置（支持通过 setup 页面修改） ============
+    // ============ 动态配置 ============
     getOwner() {
-        return localStorage.getItem('netdisk_owner') || this.GITHUB_OWNER;
+        return this.GITHUB_OWNER;
     },
 
     getRepo() {
-        return localStorage.getItem('netdisk_repo') || this.REPO_NAME;
+        return this.REPO_NAME;
     },
 
     getPagesUrl() {
@@ -63,33 +104,25 @@ const CONFIG = {
         if (this.PAGES_BASE_URL && this.PAGES_BASE_URL !== 'https://USERNAME.github.io/REPO_NAME') {
             return this.PAGES_BASE_URL;
         }
-        // 其次使用 localStorage 中用户自定义的地址
-        const custom = localStorage.getItem('netdisk_pages_url');
-        if (custom) return custom;
         // 最后动态推导当前页面基础 URL
         const path = window.location.pathname;
         const basePath = path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1);
         return window.location.origin + basePath;
     },
 
-    setDynamicConfig(owner, repo, pagesUrl) {
-        localStorage.setItem('netdisk_owner', owner);
-        localStorage.setItem('netdisk_repo', repo);
-        if (pagesUrl) localStorage.setItem('netdisk_pages_url', pagesUrl);
-    },
-
-    // 检查是否已配置完成
-    isConfigured() {
+    // 检查是否已配置完成（异步）
+    async isConfigured() {
         const owner = this.getOwner();
         const repo = this.getRepo();
-        const token = this.getToken();
+        const token = await this.getToken();
         return owner && owner !== 'YOUR_GITHUB_USERNAME' && repo && repo !== '' && token !== '';
     },
 
-    // 获取 API 请求头
-    getAuthHeaders() {
+    // 获取 API 请求头（异步）
+    async getAuthHeaders() {
+        const token = await this.getToken();
         return {
-            'Authorization': `Bearer ${this.getToken()}`,
+            'Authorization': `Bearer ${token}`,
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': this.API_VERSION,
             'Content-Type': 'application/json'

@@ -125,7 +125,7 @@ const UI = {
     // ============ 权限检查 ============
 
     async checkAuth() {
-        if (!CONFIG.isConfigured()) {
+        if (!(await CONFIG.isConfigured())) {
             window.location.href = 'login.html';
             return false;
         }
@@ -147,8 +147,8 @@ const UI = {
         return user;
     },
 
-    checkConfig() {
-        if (!CONFIG.isConfigured()) {
+    async checkConfig() {
+        if (!(await CONFIG.isConfigured())) {
             window.location.href = 'login.html';
             return false;
         }

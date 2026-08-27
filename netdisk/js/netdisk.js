@@ -688,6 +688,8 @@ const Netdisk = {
 
         // 超级管理员不能注销自己
         if (user.role === 'superadmin') throw new Error('超级管理员不能注销自己的账户');
+        // 冻结状态不能注销（需要先解冻）
+        if (user.status === 'frozen') throw new Error('账户已被冻结，无法注销，请先联系管理员解冻');
 
         // 第一重确认：验证密码
         const isValid = await verifyPassword(password, user.salt, user.passwordHash);

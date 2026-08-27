@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户管理 - GitHub Netdisk</title>
-    <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -52,6 +52,24 @@
             </div>
         </div>
 
+        <!-- 管理员设置（仅超级管理员可见） -->
+        <div class="account-card" id="admin-settings-card" style="display: none;">
+            <h3>管理员设置</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">设置或取消其他用户的管理员角色。</p>
+            <div class="form-group">
+                <label>选择用户</label>
+                <select id="admin-target-user">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>当前角色</label>
+                <span class="account-value" id="admin-target-role">-</span>
+            </div>
+            <button class="btn btn-primary" id="set-admin-btn">设为管理员</button>
+            <button class="btn btn-secondary" id="remove-admin-btn" style="margin-top: 8px;">取消管理员</button>
+        </div>
+
         <!-- 修改密码 -->
         <div class="account-card">
             <h3>修改密码</h3>
@@ -87,8 +105,8 @@
 
     <script src="js/config.js?v=5"></script>
     <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=6"></script>
-    <script src="js/ui.js?v=13"></script>
+    <script src="js/netdisk.js?v=7"></script>
+    <script src="js/ui.js?v=14"></script>
     <script>
         const Account = {
             currentUser: null,
@@ -130,8 +148,14 @@
                 document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
 
                 // 管理员显示管理后台入口
-                if (this.currentUser.role === 'admin') {
+                if (this.currentUser.role === 'admin' || this.currentUser.role === 'superadmin') {
                     document.getElementById('admin-btn').style.display = 'inline-flex';
+                }
+
+                // 超级管理员显示管理员设置卡片
+                if (this.currentUser.role === 'superadmin') {
+                    document.getElementById('admin-settings-card').style.display = 'block';
+                    await this.loadAdminTargetUsers();
                 }
 
                 // 显示账户信息
@@ -145,7 +169,49 @@
                 document.getElementById('info-username').textContent = this.currentUser.username;
                 document.getElementById('info-email').textContent = this.currentUser.email;
                 document.getElementById('info-verified').textContent = this.currentUser.verified ? '已验证' : '未验证';
-                document.getElementById('info-role').textContent = this.currentUser.role === 'admin' ? '管理员' : '普通用户';
+                const role = this.currentUser.role;
+                document.getElementById('info-role').textContent = role === 'superadmin' ? '超级管理员' : (role === 'admin' ? '管理员' : '普通用户');
+            },
+
+            // 加载用户列表（用于管理员设置）
+            async loadAdminTargetUsers() {
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const select = document.getElementById('admin-target-user');
+                    select.innerHTML = '<option value="">请选择用户</option>';
+                    users.forEach(u => {
+                        if (u.id !== this.currentUser.id) {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            opt.textContent = `${u.username} (${u.email})`;
+                            select.appendChild(opt);
+                        }
+                    });
+                    // 绑定选择事件
+                    select.addEventListener('change', () => this.updateTargetRole());
+                } catch (e) {
+                    document.getElementById('admin-target-user').innerHTML = '<option value="">加载失败</option>';
+                }
+            },
+
+            // 更新目标用户角色显示
+            async updateTargetRole() {
+                const userId = document.getElementById('admin-target-user').value;
+                const roleEl = document.getElementById('admin-target-role');
+                if (!userId) {
+                    roleEl.textContent = '-';
+                    return;
+                }
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const user = users.find(u => u.id === userId);
+                    if (user) {
+                        const role = user.role;
+                        roleEl.textContent = role === 'superadmin' ? '超级管理员' : (role === 'admin' ? '管理员' : '普通用户');
+                    }
+                } catch (e) {
+                    roleEl.textContent = '获取失败';
+                }
             },
 
             bindEvents() {
@@ -158,6 +224,44 @@
                 // 管理后台
                 document.getElementById('admin-btn').addEventListener('click', () => {
                     window.location.href = 'admin.html';
+                });
+
+                // 设为管理员
+                document.getElementById('set-admin-btn').addEventListener('click', async () => {
+                    const userId = document.getElementById('admin-target-user').value;
+                    if (!userId) {
+                        UI.showMessage('请先选择用户', 'warning');
+                        return;
+                    }
+                    try {
+                        UI.showLoading('设置中...');
+                        const result = await Netdisk.setAdminRole(userId, true);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        await this.updateTargetRole();
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 取消管理员
+                document.getElementById('remove-admin-btn').addEventListener('click', async () => {
+                    const userId = document.getElementById('admin-target-user').value;
+                    if (!userId) {
+                        UI.showMessage('请先选择用户', 'warning');
+                        return;
+                    }
+                    try {
+                        UI.showLoading('设置中...');
+                        const result = await Netdisk.setAdminRole(userId, false);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        await this.updateTargetRole();
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
                 });
 
                 // 修改密码

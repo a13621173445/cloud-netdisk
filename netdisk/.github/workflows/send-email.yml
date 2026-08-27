@@ -19,5 +19,5 @@ jobs:
           to: ${{ github.event.client_payload.to }}
           subject: ${{ github.event.client_payload.subject }}
           body: ${{ github.event.client_payload.body }}
-          content_type: html
+          content_type: text/plain
           convert_markdown: false

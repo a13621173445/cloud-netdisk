@@ -42,7 +42,7 @@ const GitHubAPI = {
 
         const options = {
             method: method,
-            headers: CONFIG.getAuthHeaders()
+            headers: await CONFIG.getAuthHeaders()
         };
         if (body !== undefined) {
             options.body = JSON.stringify(body);
@@ -256,9 +256,10 @@ const GitHubAPI = {
     // ============ 获取用户信息（验证 Token 有效性） ============
 
     async getUser() {
+        const token = await CONFIG.getToken();
         const response = await fetch(`${CONFIG.API_BASE}/user`, {
             headers: {
-                'Authorization': `Bearer ${CONFIG.getToken()}`,
+                'Authorization': `Bearer ${token}`,
                 'Accept': 'application/vnd.github+json'
             }
         });

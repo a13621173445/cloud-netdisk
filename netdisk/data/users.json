@@ -22,9 +22,9 @@
       "salt": "f6f1dd0244144af748afdaba62cd4f6a",
       "role": "user",
       "status": "active",
-      "verified": false,
-      "verificationCode": "127294",
-      "verificationCodeExpiry": "2026-08-27T22:24:44.923Z",
+      "verified": true,
+      "verificationCode": null,
+      "verificationCodeExpiry": null,
       "resetToken": null,
       "resetTokenExpiry": null,
       "createdAt": "2026-08-27T22:14:44.923Z"

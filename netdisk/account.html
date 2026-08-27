@@ -126,8 +126,8 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=7"></script>
-    <script src="js/github.js?v=5"></script>
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=11"></script>
     <script src="js/ui.js?v=18"></script>
     <script>
@@ -136,7 +136,7 @@
 
             async init() {
                 // 检查配置
-                if (!CONFIG.isConfigured()) {
+                if (!(await CONFIG.isConfigured())) {
                     window.location.href = 'login.html';
                     return;
                 }

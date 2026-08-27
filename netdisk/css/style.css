@@ -347,8 +347,13 @@ body {
     background: var(--primary-light);
 }
 
+.btn-icon.btn-danger {
+    color: var(--error);
+}
+
 .btn-icon.btn-danger:hover {
     background: #FEE2E2;
+    color: var(--error);
 }
 
 /* ============ 空状态 ============ */

@@ -1,3 +1,19 @@
 {
-  "files": []
+  "files": [
+    {
+      "id": "c09c23b3-5f66-48f4-adea-63100ec5e742",
+      "name": "2b2t.fun    kit备份.png",
+      "size": 2444005,
+      "type": "image/png",
+      "path": "netdisk/storage/c09c23b3-5f66-48f4-adea-63100ec5e742_2b2t.fun____kit__.png",
+      "ownerId": "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
+      "shared": true,
+      "shareToken": "4e562f7f4a483ba4f0bd95d0a11b4b60df2421b6bb3d95a6aa7adf27c924ef62",
+      "uploadedAt": "2026-08-27T08:38:18.110Z",
+      "shareExpireDays": 7,
+      "shareExpireAt": "2026-09-03T10:58:39.468Z",
+      "shareMaxDownloads": 5,
+      "shareDownloadCount": 0
+    }
+  ]
 }

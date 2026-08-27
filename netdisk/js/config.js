@@ -23,9 +23,9 @@ const CONFIG = {
     // Token 使用 AES-256-GCM 加密后存储，运行时解密
     // 生成方式：用工具将你的 GitHub Token 用 AES-256 加密，得到 KEY/IV/CIPHER
     // 需要权限：repo (或 fine-grained: Contents Read/Write + Actions Write)
-    TOKEN_KEY: 'quv4oegGqKDDLHe4fnvO3c0uOdGrJQnQpMoAiFLY10s=',
-    TOKEN_IV: 'dEwyJ81UsLqe5zOCPQcdyg==',
-    TOKEN_CIPHER: 'kSAmgjQpznfLwlC15YoeMzZvgLeVaG+btlWVD2W9LDTcIIqaSEvhGl2683SvI5cx',
+    TOKEN_KEY: '0rUB9QYYYJR7cZPqDU6GUcdoXQ3a5ly5OHieXbGqARY=',
+    TOKEN_IV: 'y+3jz6FJ9pX5orXW',
+    TOKEN_CIPHER: 'DfO7CLM2jPxdR1A8foaPr7fXlqy0vkcX29cGHy0ueImW5/I+Xbc0aMvjdr6+NOLXsJk0+I+ZZGA=',
 
     // ============ 内部配置（一般不需要修改） ============
     API_BASE: 'https://api.github.com',

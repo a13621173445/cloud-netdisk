@@ -83,9 +83,9 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=6"></script>
+    <script src="js/config.js?v=7"></script>
     <script src="js/github.js?v=5"></script>
-    <script src="js/netdisk.js?v=9"></script>
+    <script src="js/netdisk.js?v=11"></script>
     <script src="js/ui.js?v=16"></script>
     <script>
         const App = {
@@ -95,7 +95,7 @@
             async init() {
                 // 检查配置
                 if (!CONFIG.isConfigured()) {
-                    window.location.href = 'setup.html';
+                    window.location.href = 'login.html';
                     return;
                 }
 

@@ -1,0 +1,214 @@
+/**
+ * UI 工具函数
+ * 提供通用的 UI 交互、格式化、安全处理等功能
+ */
+
+const UI = {
+
+    // ============ 消息提示 ============
+
+    showMessage(text, type = 'info') {
+        const container = document.getElementById('toast-container') || this.createToastContainer();
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        const icons = {
+            success: '&#10003;',
+            error: '&#10007;',
+            info: '&#8505;',
+            warning: '&#9888;'
+        };
+
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-text">${this.escapeHtml(text)}</span>
+        `;
+
+        container.appendChild(toast);
+
+        // 动画显示
+        requestAnimationFrame(() => toast.classList.add('show'));
+
+        // 3秒后自动消失
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    },
+
+    createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+        return container;
+    },
+
+    // ============ 加载提示 ============
+
+    showLoading(text = '加载中...') {
+        let overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-spinner"></div>
+                <p class="loading-text">${this.escapeHtml(text)}</p>
+            `;
+            document.body.appendChild(overlay);
+        } else {
+            overlay.querySelector('.loading-text').textContent = text;
+        }
+        overlay.style.display = 'flex';
+    },
+
+    hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'none';
+    },
+
+    // ============ 格式化 ============
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return '刚刚';
+        if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+        if (diff < 604800000) return Math.floor(diff / 86400000) + ' 天前';
+
+        return date.toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    },
+
+    // ============ 安全处理 ============
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    },
+
+    // ============ 文件图标 ============
+
+    getFileIcon(type, name) {
+        const ext = (name || '').split('.').pop().toLowerCase();
+        const icons = {
+            'pdf': '📄', 'doc': '📝', 'docx': '📝',
+            'xls': '📊', 'xlsx': '📊',
+            'ppt': '📑', 'pptx': '📑',
+            'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'svg': '🖼️',
+            'mp4': '🎬', 'avi': '🎬', 'mov': '🎬',
+            'mp3': '🎵', 'wav': '🎵',
+            'zip': '🗜️', 'rar': '🗜️', '7z': '🗜️',
+            'txt': '📃', 'md': '📃',
+            'js': '📜', 'json': '📜', 'html': '📜',
+            'default': '📄'
+        };
+        return icons[ext] || icons['default'];
+    },
+
+    // ============ 权限检查 ============
+
+    async checkAuth() {
+        if (!CONFIG.isConfigured()) {
+            window.location.href = 'setup.html';
+            return false;
+        }
+
+        const user = await Netdisk.getCurrentUser();
+        if (!user) {
+            window.location.href = 'login.html';
+            return false;
+        }
+        return true;
+    },
+
+    checkAuthSync() {
+        const user = Netdisk.getCurrentUserLocal();
+        if (!user) {
+            window.location.href = 'login.html';
+            return null;
+        }
+        return user;
+    },
+
+    checkConfig() {
+        if (!CONFIG.isConfigured()) {
+            window.location.href = 'setup.html';
+            return false;
+        }
+        return true;
+    },
+
+    // ============ URL 参数 ============
+
+    getQueryParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name);
+    },
+
+    // ============ 文件列表渲染 ============
+
+    renderFileList(files, container) {
+        if (!files || files.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📁</div>
+                    <p>暂无文件，点击上方按钮上传</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = files.map(file => `
+            <div class="file-card" data-id="${this.escapeHtml(file.id)}">
+                <div class="file-icon">${this.getFileIcon(file.type, file.name)}</div>
+                <div class="file-info">
+                    <div class="file-name" title="${this.escapeHtml(file.name)}">${this.escapeHtml(file.name)}</div>
+                    <div class="file-meta">
+                        ${this.formatFileSize(file.size)} · ${this.formatDate(file.uploadedAt)}
+                        ${file.shared ? '<span class="badge-shared">已分享</span>' : ''}
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="btn-icon" onclick="App.downloadFile('${this.escapeHtml(file.id)}')" title="下载">⬇</button>
+                    <button class="btn-icon" onclick="App.shareFile('${this.escapeHtml(file.id)}')" title="分享">🔗</button>
+                    <button class="btn-icon btn-danger" onclick="App.deleteFile('${this.escapeHtml(file.id)}')" title="删除">🗑</button>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    // ============ 复制到剪贴板 ============
+
+    async copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            this.showMessage('已复制到剪贴板', 'success');
+        } catch (e) {
+            // 降级方案
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+            this.showMessage('已复制到剪贴板', 'success');
+        }
+    }
+};

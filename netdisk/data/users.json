@@ -21,7 +21,7 @@
       "passwordHash": "287e22cb3feedee22ec3b76cc3c6000302eab64d995bd3416dbaca1555a1ade9",
       "salt": "f6f1dd0244144af748afdaba62cd4f6a",
       "role": "user",
-      "status": "disabled",
+      "status": "active",
       "verified": true,
       "verificationCode": null,
       "verificationCodeExpiry": null,
@@ -29,10 +29,10 @@
       "resetTokenExpiry": null,
       "createdAt": "2026-08-27T22:14:44.923Z",
       "statusReason": "",
-      "statusUpdatedAt": "2026-08-27T22:33:26.648Z",
+      "statusUpdatedAt": "2026-08-27T22:36:38.679Z",
       "statusUpdatedBy": "a13621173445",
-      "unfreezeRequested": true,
-      "unfreezeRequestedAt": "2026-08-27T22:34:53.421Z"
+      "unfreezeRequested": false,
+      "unfreezeRequestedAt": null
     }
   ]
 }

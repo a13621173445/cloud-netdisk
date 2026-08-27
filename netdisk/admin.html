@@ -337,8 +337,8 @@
                                         <td>
                                             <div class="admin-actions">
                                                 ${this.canOperateUser(u) ? `
-                                                    ${u.status !== 'disabled' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.disableUser('${u.id}')">禁用</button>` : ''}
-                                                    ${u.status !== 'frozen' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.freezeUser('${u.id}')">冻结</button>` : ''}
+                                                    ${u.status !== 'disabled' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.disableUser('${u.id}')">禁用</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解禁</button>`}
+                                                    ${u.status !== 'frozen' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.freezeUser('${u.id}')">冻结</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解冻</button>`}
                                                     <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${u.id}')">注销</button>
                                                 ` : '<span style="color:#999;font-size:12px">—</span>'}
                                             </div>
@@ -510,6 +510,21 @@
                     await Netdisk.adminFreezeUser(userId, reason || '');
                     UI.hideLoading();
                     UI.showMessage('用户已冻结', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async activateUser(userId) {
+                const confirmed = await UI.confirm('确定要恢复该用户的正常状态吗？', '恢复用户', '确定', '取消');
+                if (!confirmed) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminActivateUser(userId);
+                    UI.hideLoading();
+                    UI.showMessage('用户已恢复为正常状态', 'success');
                     await this.loadUsers();
                 } catch (error) {
                     UI.hideLoading();

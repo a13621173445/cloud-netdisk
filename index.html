@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -54,10 +54,27 @@
         <div class="modal">
             <h3>分享文件</h3>
             <div class="modal-body">
-                <p class="text-muted" style="margin-bottom: 12px;">复制以下链接分享给他人，任何人都可以通过此链接下载文件。</p>
-                <div class="share-link-box">
-                    <input type="text" id="share-url" readonly>
-                    <button class="btn btn-primary btn-sm" id="copy-share-btn">复制</button>
+                <div id="share-config">
+                    <p class="text-muted" style="margin-bottom: 12px;">设置分享限制，生成分享链接。</p>
+                    <div class="form-group">
+                        <label>有效期（天）</label>
+                        <input type="number" id="share-expire-days" value="-1" min="-1" placeholder="-1 表示无限制">
+                        <div class="hint">-1 表示无限制，其他值表示有效天数</div>
+                    </div>
+                    <div class="form-group">
+                        <label>下载次数限制</label>
+                        <input type="number" id="share-max-downloads" value="-1" min="-1" placeholder="-1 表示无限制">
+                        <div class="hint">-1 表示无限制，其他值表示最大下载次数</div>
+                    </div>
+                    <button class="btn btn-primary" id="generate-share-btn">生成分享链接</button>
+                </div>
+                <div id="share-result" style="display: none;">
+                    <p class="text-muted" style="margin-bottom: 12px;">复制以下链接分享给他人。</p>
+                    <div class="share-link-box">
+                        <input type="text" id="share-url" readonly>
+                        <button class="btn btn-primary btn-sm" id="copy-share-btn">复制</button>
+                    </div>
+                    <div id="share-limit-info" class="text-muted" style="margin-top: 8px; font-size: 13px;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -91,45 +108,36 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=2"></script>
-    <script src="js/github.js?v=2"></script>
-    <script src="js/netdisk.js?v=2"></script>
-    <script src="js/ui.js?v=2"></script>
+    <script src="js/config.js?v=4"></script>
+    <script src="js/github.js?v=4"></script>
+    <script src="js/netdisk.js?v=4"></script>
+    <script src="js/ui.js?v=4"></script>
     <script>
         const App = {
             currentUser: null,
             fileInput: null,
 
             async init() {
-                // 检查配置
                 if (!CONFIG.isConfigured()) {
                     window.location.href = 'setup.html';
                     return;
                 }
 
-                // 检查登录
                 this.currentUser = await Netdisk.getCurrentUser();
                 if (!this.currentUser) {
                     window.location.href = 'login.html';
                     return;
                 }
 
-                // 显示用户信息
                 document.getElementById('user-name').textContent = this.currentUser.username;
                 document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
 
-                // 管理员显示管理后台入口
                 if (this.currentUser.role === 'admin') {
                     document.getElementById('admin-btn').style.display = 'inline-flex';
                 }
 
-                // 初始化上传
                 this.initUpload();
-
-                // 加载文件列表
                 await this.loadFiles();
-
-                // 绑定事件
                 this.bindEvents();
             },
 
@@ -137,12 +145,10 @@
                 this.fileInput = document.getElementById('file-input');
                 const uploadArea = document.getElementById('upload-area');
 
-                // 点击上传
                 uploadArea.addEventListener('click', () => {
                     this.fileInput.click();
                 });
 
-                // 文件选择
                 this.fileInput.addEventListener('change', (e) => {
                     if (e.target.files.length > 0) {
                         this.uploadFile(e.target.files[0]);
@@ -150,7 +156,6 @@
                     }
                 });
 
-                // 拖拽上传
                 uploadArea.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     uploadArea.classList.add('dragover');
@@ -197,7 +202,6 @@
                     const result = await Netdisk.downloadFile(fileId);
                     UI.hideLoading();
 
-                    // 创建下载链接
                     const a = document.createElement('a');
                     a.href = result.url;
                     a.download = result.name;
@@ -212,13 +216,33 @@
             },
 
             async shareFile(fileId) {
+                this.currentShareFileId = fileId;
+                document.getElementById('share-config').style.display = 'block';
+                document.getElementById('share-result').style.display = 'none';
+                document.getElementById('share-expire-days').value = '-1';
+                document.getElementById('share-max-downloads').value = '-1';
+                document.getElementById('share-modal').style.display = 'flex';
+            },
+
+            async generateShareLink() {
+                const fileId = this.currentShareFileId;
+                if (!fileId) return;
+
+                const expireDays = parseInt(document.getElementById('share-expire-days').value);
+                const maxDownloads = parseInt(document.getElementById('share-max-downloads').value);
+
                 try {
                     UI.showLoading('生成分享链接...');
-                    const result = await Netdisk.createShareLink(fileId);
+                    const result = await Netdisk.createShareLink(fileId, expireDays, maxDownloads);
                     UI.hideLoading();
 
                     document.getElementById('share-url').value = result.shareUrl;
-                    document.getElementById('share-modal').style.display = 'flex';
+                    document.getElementById('share-config').style.display = 'none';
+                    document.getElementById('share-result').style.display = 'block';
+
+                    const expireText = result.expireDays === -1 ? '无限制' : `${result.expireDays} 天`;
+                    const downloadText = result.maxDownloads === -1 ? '无限制' : `${result.maxDownloads} 次`;
+                    document.getElementById('share-limit-info').textContent = `有效期：${expireText}，下载次数：${downloadText}`;
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');
@@ -241,25 +265,25 @@
             },
 
             bindEvents() {
-                // 退出登录
                 document.getElementById('logout-btn').addEventListener('click', async () => {
                     await Netdisk.logout();
                     window.location.href = 'login.html';
                 });
 
-                // 管理后台
                 document.getElementById('admin-btn').addEventListener('click', () => {
                     window.location.href = 'admin.html';
                 });
 
-                // 上传按钮
                 document.getElementById('upload-btn').addEventListener('click', () => {
                     this.fileInput.click();
                 });
 
-                // 分享模态框
                 document.getElementById('close-share-btn').addEventListener('click', () => {
                     document.getElementById('share-modal').style.display = 'none';
+                });
+
+                document.getElementById('generate-share-btn').addEventListener('click', () => {
+                    this.generateShareLink();
                 });
 
                 document.getElementById('copy-share-btn').addEventListener('click', () => {
@@ -267,7 +291,6 @@
                     UI.copyToClipboard(input.value);
                 });
 
-                // 修改密码
                 document.getElementById('pwd-btn').addEventListener('click', () => {
                     document.getElementById('pwd-modal').style.display = 'flex';
                 });

@@ -102,11 +102,16 @@
             <button class="btn btn-primary" id="change-email-btn">确认修改邮箱</button>
         </div>
 
-        <!-- 申请解冻/解禁 -->
+        <!-- 申请解禁 -->
         <div class="account-card" id="unfreeze-card" style="display: none;">
-            <h3>申请解冻/解禁</h3>
-            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">你的账户当前处于冻结或禁用状态，可以提交解冻申请，等待管理员处理。</p>
-            <button class="btn btn-primary" id="request-unfreeze-btn">提交解冻申请</button>
+            <h3>申请解禁</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">你的账户已被禁用，可以提交解禁申请，等待管理员处理。</p>
+            <div class="form-group">
+                <label>申请原因（最多 500 字）</label>
+                <textarea id="unfreeze-reason" placeholder="请说明申请解禁的原因..." maxlength="500" style="width:100%;min-height:100px;resize:vertical;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;line-height:1.5;"></textarea>
+                <div class="hint" id="unfreeze-char-count">已输入 0 / 500 字</div>
+            </div>
+            <button class="btn btn-primary" id="request-unfreeze-btn">提交解禁申请</button>
         </div>
 
         <!-- 注销账户 -->
@@ -345,17 +350,26 @@
                     }
                 });
 
-                // 提交解冻申请
+                // 提交解禁申请
                 document.getElementById('request-unfreeze-btn').addEventListener('click', async () => {
+                    const reason = document.getElementById('unfreeze-reason').value.trim();
                     try {
                         UI.showLoading('提交中...');
-                        const result = await Netdisk.requestUnfreeze();
+                        const result = await Netdisk.requestUnfreeze(reason);
                         UI.hideLoading();
                         UI.showMessage(result.message, 'success');
                     } catch (error) {
                         UI.hideLoading();
                         UI.showMessage(error.message, 'error');
                     }
+                });
+
+                // 字符计数
+                const reasonInput = document.getElementById('unfreeze-reason');
+                const charCount = document.getElementById('unfreeze-char-count');
+                reasonInput.addEventListener('input', () => {
+                    const len = reasonInput.value.length;
+                    charCount.textContent = `已输入 ${len} / 500 字`;
                 });
 
                 // 获取注销验证码

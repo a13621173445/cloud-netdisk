@@ -1,1 +1,33 @@
-{"users":[{"id":"6a9be1c2-19aa-4673-bfab-d09dec663ef2","username":"a13621173445","email":"a13621173445@163.com","passwordHash":"ce36c5e64e174d5bd8453aa0b0b39ddab168cd33bcb58e669d91ee39ba9cc1c1","salt":"d713076b4bfdc313311348aa9ab2b918","verified":true,"verificationToken":null,"resetToken":null,"resetTokenExpiry":null,"createdAt":"2026-08-27T08:10:06.474Z","role":"superadmin","status":"active"}]}
+{
+  "users": [
+    {
+      "id": "6a9be1c2-19aa-4673-bfab-d09dec663ef2",
+      "username": "a13621173445",
+      "email": "a13621173445@163.com",
+      "passwordHash": "ce36c5e64e174d5bd8453aa0b0b39ddab168cd33bcb58e669d91ee39ba9cc1c1",
+      "salt": "d713076b4bfdc313311348aa9ab2b918",
+      "verified": true,
+      "verificationToken": null,
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-27T08:10:06.474Z",
+      "role": "superadmin",
+      "status": "active"
+    },
+    {
+      "id": "0d73d724-700e-4241-8804-51cca19e90a7",
+      "username": "Av3rucu3",
+      "email": "3657569788@qq.com",
+      "passwordHash": "287e22cb3feedee22ec3b76cc3c6000302eab64d995bd3416dbaca1555a1ade9",
+      "salt": "f6f1dd0244144af748afdaba62cd4f6a",
+      "role": "user",
+      "status": "active",
+      "verified": false,
+      "verificationCode": "127294",
+      "verificationCodeExpiry": "2026-08-27T22:24:44.923Z",
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-27T22:14:44.923Z"
+    }
+  ]
+}

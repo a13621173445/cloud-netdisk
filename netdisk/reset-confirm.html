@@ -36,22 +36,25 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=7"></script>
-    <script src="js/github.js?v=5"></script>
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=11"></script>
     <script src="js/ui.js?v=8"></script>
     <script>
-        if (!CONFIG.isConfigured()) {
-            window.location.href = 'login.html';
-        }
+        (async () => {
+            if (!(await CONFIG.isConfigured())) {
+                window.location.href = 'login.html';
+                return;
+            }
 
-        const token = UI.getQueryParam('token');
+            const token = UI.getQueryParam('token');
 
-        if (!token) {
-            document.getElementById('form-section').innerHTML = `
-                <div class="alert alert-error">重置链接无效，缺少必要参数。</div>
-            `;
-        }
+            if (!token) {
+                document.getElementById('form-section').innerHTML = `
+                    <div class="alert alert-error">重置链接无效，缺少必要参数。</div>
+                `;
+            }
+        })();
 
         document.getElementById('reset-confirm-form').addEventListener('submit', async (e) => {
             e.preventDefault();

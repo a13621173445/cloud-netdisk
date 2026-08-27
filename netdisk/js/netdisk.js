@@ -540,6 +540,65 @@ const Netdisk = {
         return { success: true, message: '密码修改成功！' };
     },
 
+    // ============ 修改邮箱（已登录） ============
+
+    async changeEmail(newEmail, password) {
+        const currentUser = this.getCurrentUserLocal();
+        if (!currentUser) throw new Error('请先登录');
+
+        if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+            throw new Error('请输入有效的邮箱地址');
+        }
+        if (!password) throw new Error('请输入当前密码以确认操作');
+
+        // 读取用户数据验证密码
+        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData && usersData.users) || [];
+        const user = users.find(u => u.id === currentUser.id);
+        if (!user) throw new Error('用户不存在');
+        const isValid = await verifyPassword(password, user.salt, user.passwordHash);
+        if (!isValid) throw new Error('密码错误');
+
+        // 检查新邮箱是否已被其他用户使用
+        if (users.some(u => u.email === newEmail && u.id !== currentUser.id)) {
+            throw new Error('该邮箱已被其他用户使用');
+        }
+
+        // 更新邮箱，并重置验证状态（需要重新验证）
+        const verificationToken = generateToken();
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const u = data.users.find(u => u.id === currentUser.id);
+                if (!u) throw new Error('用户不存在');
+                u.email = newEmail.trim();
+                u.verified = false;
+                u.verificationToken = verificationToken;
+                return data;
+            },
+            '修改邮箱'
+        );
+
+        // 发送验证邮件
+        try {
+            await this.sendVerificationEmail(newEmail.trim(), verificationToken);
+        } catch (e) {
+            // 邮件发送失败不影响修改
+            console.warn('验证邮件发送失败:', e);
+        }
+
+        // 更新本地存储的用户信息
+        const localUser = this.getCurrentUserLocal();
+        if (localUser) {
+            localUser.email = newEmail.trim();
+            localUser.verified = false;
+            localStorage.setItem('netdisk_user', JSON.stringify(localUser));
+        }
+
+        return { success: true, message: '邮箱修改成功！请查收验证邮件完成新邮箱验证。' };
+    },
+
     // ============ 文件上传 ============
 
     async uploadFile(file) {

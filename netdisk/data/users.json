@@ -33,6 +33,21 @@
       "statusUpdatedBy": "a13621173445",
       "unfreezeRequested": false,
       "unfreezeRequestedAt": null
+    },
+    {
+      "id": "6593cc85-8be8-4fa0-bcb7-aef960b38b9b",
+      "username": "balckbeans",
+      "email": "1923620953@qq.com",
+      "passwordHash": "646df41bb7150401aae2c8b4da8173833ec74b0928da1ad8128ece058544a3f9",
+      "salt": "a47b4bd29f76dd0712141e4b3c3090c0",
+      "role": "user",
+      "status": "active",
+      "verified": false,
+      "verificationCode": "833111",
+      "verificationCodeExpiry": "2026-08-27T23:21:20.948Z",
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-27T23:11:20.948Z"
     }
   ]
 }

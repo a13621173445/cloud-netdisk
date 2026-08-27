@@ -81,7 +81,6 @@ const Netdisk = {
     // ============ 用户注册 ============
 
     async register(username, email, password) {
-        // 参数校验
         if (!username || username.trim().length < 2) {
             throw new Error('用户名至少需要 2 个字符');
         }
@@ -92,7 +91,6 @@ const Netdisk = {
             throw new Error('密码至少需要 6 个字符');
         }
 
-        // 检查邮箱/用户名是否已存在
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
         const users = (data && data.users) || [];
 
@@ -103,7 +101,6 @@ const Netdisk = {
             throw new Error('该用户名已被使用');
         }
 
-        // 哈希密码后存储（PBKDF2 + 随机盐）
         const salt = await generateSalt();
         const passwordHash = await hashPassword(password, salt);
         const verificationToken = generateToken();
@@ -113,8 +110,8 @@ const Netdisk = {
             email: email.trim(),
             passwordHash: passwordHash,
             salt: salt,
-            role: 'user',           // 角色: user / admin
-            status: 'active',       // 状态: active / disabled / frozen / deleted
+            role: 'user',
+            status: 'active',
             verified: false,
             verificationToken: verificationToken,
             resetToken: null,
@@ -122,7 +119,6 @@ const Netdisk = {
             createdAt: new Date().toISOString()
         };
 
-        // 写入用户数据
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.USERS,
             (data) => {
@@ -133,11 +129,9 @@ const Netdisk = {
             `新用户注册: ${username}`
         );
 
-        // 发送验证邮件
         try {
             await this.sendVerificationEmail(email, verificationToken);
         } catch (e) {
-            // 邮件发送失败不影响注册
             console.warn('验证邮件发送失败:', e);
         }
 
@@ -197,7 +191,6 @@ const Netdisk = {
 
     // ============ 用户登录 ============
 
-    // 获取客户端公网 IP（用于同一天同 IP 自动登录）
     async getClientIp() {
         try {
             const response = await fetch('https://api.ipify.org?format=json');
@@ -208,13 +201,11 @@ const Netdisk = {
         }
     },
 
-    // 获取今天的日期字符串（YYYY-MM-DD）
     getTodayString() {
         const now = new Date();
         return now.toISOString().split('T')[0];
     },
 
-    // 检查是否同一天同一 IP 已登录（用于自动登录）
     async checkAutoLogin() {
         const ip = await this.getClientIp();
         if (!ip) return null;
@@ -223,7 +214,6 @@ const Netdisk = {
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.SESSIONS);
         const sessions = (data && data.sessions) || [];
 
-        // 查找同一天、同一 IP、未过期的会话
         const session = sessions.find(s =>
             s.ip === ip &&
             s.lastLoginDate === today &&
@@ -232,7 +222,6 @@ const Netdisk = {
 
         if (!session) return null;
 
-        // 获取用户信息
         const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
         const users = (usersData.data && usersData.data.users) || [];
         const user = users.find(u => u.id === session.userId);
@@ -241,7 +230,6 @@ const Netdisk = {
         const status = user.status || 'active';
         if (status !== 'active') return null;
 
-        // 自动登录成功，设置本地会话
         localStorage.setItem('netdisk_session', session.token);
         localStorage.setItem('netdisk_user', JSON.stringify({
             id: user.id,
@@ -270,17 +258,13 @@ const Netdisk = {
         if (!isValid) throw new Error('邮箱或密码错误');
         if (!user.verified) throw new Error('请先验证邮箱后再登录');
 
-        // 检查账户状态
         const status = user.status || 'active';
         if (status === 'disabled') throw new Error('该账户已被禁用，请联系管理员');
         if (status === 'frozen') throw new Error('该账户已被冻结，请联系管理员');
         if (status === 'deleted') throw new Error('该账户已注销，无法登录');
 
-        // 获取客户端 IP
         const ip = await this.getClientIp();
 
-        // 创建会话
-        // 记住我：30 天；否则：7 天
         const sessionDuration = rememberMe ? 30 * 24 * 60 * 60 * 1000 : SESSION_DURATION;
         const sessionToken = generateToken();
         const session = {
@@ -297,7 +281,6 @@ const Netdisk = {
             CONFIG.DATA.SESSIONS,
             (data) => {
                 if (!data.sessions) data.sessions = [];
-                // 清理旧会话
                 data.sessions = data.sessions.filter(s => s.userId !== user.id || new Date(s.expiresAt) > new Date());
                 data.sessions.push(session);
                 return data;
@@ -305,7 +288,6 @@ const Netdisk = {
             `用户登录: ${user.username}`
         );
 
-        // 本地存储会话
         localStorage.setItem('netdisk_session', sessionToken);
         localStorage.setItem('netdisk_user', JSON.stringify({
             id: user.id,
@@ -339,7 +321,6 @@ const Netdisk = {
                     '用户退出登录'
                 );
             } catch (e) {
-                // 即使服务端清理失败也清除本地状态
             }
         }
         localStorage.removeItem('netdisk_session');
@@ -398,11 +379,9 @@ const Netdisk = {
                 );
                 session.expiresAt = newExpiresAt;
             } catch (e) {
-                // 续期失败不影响当前会话
             }
         }
 
-        // 获取用户信息
         const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
         const users = (usersData.data && usersData.data.users) || [];
         const user = users.find(u => u.id === session.userId);
@@ -412,7 +391,6 @@ const Netdisk = {
             return null;
         }
 
-        // 检查账户状态，非 active 状态强制登出
         const status = user.status || 'active';
         if (status !== 'active') {
             this.logout();
@@ -435,7 +413,7 @@ const Netdisk = {
         if (!email) throw new Error('请输入邮箱地址');
 
         const resetToken = generateToken();
-        const resetExpiry = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30分钟有效
+        const resetExpiry = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
         let userEmail = null;
 
@@ -453,7 +431,6 @@ const Netdisk = {
             '密码重置请求'
         );
 
-        // 发送重置邮件
         const resetUrl = `${CONFIG.getPagesUrl()}/reset-confirm.html?token=${resetToken}`;
         const body = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -512,7 +489,6 @@ const Netdisk = {
         if (!oldPassword || !newPassword) throw new Error('请输入旧密码和新密码');
         if (newPassword.length < 6) throw new Error('新密码至少需要 6 个字符');
 
-        // 先读取用户数据验证旧密码
         const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
         const users = (usersData && usersData.users) || [];
         const user = users.find(u => u.id === currentUser.id);
@@ -520,7 +496,6 @@ const Netdisk = {
         const isValid = await verifyPassword(oldPassword, user.salt, user.passwordHash);
         if (!isValid) throw new Error('旧密码错误');
 
-        // 哈希新密码
         const newSalt = await generateSalt();
         const newPasswordHash = await hashPassword(newPassword, newSalt);
 
@@ -554,11 +529,9 @@ const Netdisk = {
         const safeName = sanitizeFilename(file.name);
         const filePath = `${CONFIG.STORAGE_DIR}/${fileId}_${safeName}`;
 
-        // 转为 Base64 并上传
         const base64Content = await fileToBase64(file);
         await GitHubAPI.createOrUpdateFile(filePath, base64Content, `上传文件: ${file.name}`, null);
 
-        // 记录文件元数据
         const fileMeta = {
             id: fileId,
             name: file.name,
@@ -607,7 +580,6 @@ const Netdisk = {
 
         if (!file) throw new Error('文件不存在或无权访问');
 
-        // 使用 raw URL 下载
         const rawUrl = GitHubAPI.getRawUrl(file.path);
         return { url: rawUrl, name: file.name, type: file.type };
     },
@@ -620,20 +592,17 @@ const Netdisk = {
 
         let deletedFile = null;
 
-        // 先获取文件信息
         const { data, sha } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
         const files = (data && data.files) || [];
         deletedFile = files.find(f => f.id === fileId && f.ownerId === currentUser.id);
 
         if (!deletedFile) throw new Error('文件不存在或无权操作');
 
-        // 删除存储的文件
         const fileInfo = await GitHubAPI.getContent(deletedFile.path);
         if (fileInfo) {
             await GitHubAPI.deleteFile(deletedFile.path, `删除文件: ${deletedFile.name}`, fileInfo.sha);
         }
 
-        // 删除文件元数据
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.FILES,
             (data) => {
@@ -649,12 +618,24 @@ const Netdisk = {
 
     // ============ 创建分享链接 ============
 
-    async createShareLink(fileId) {
+    async createShareLink(fileId, expireDays = -1, maxDownloads = -1) {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
 
+        expireDays = parseInt(expireDays);
+        maxDownloads = parseInt(maxDownloads);
+        if (isNaN(expireDays)) expireDays = -1;
+        if (isNaN(maxDownloads)) maxDownloads = -1;
+        if (expireDays !== -1 && expireDays < 1) throw new Error('有效期天数必须大于 0 或为 -1（无限制）');
+        if (maxDownloads !== -1 && maxDownloads < 1) throw new Error('下载次数必须大于 0 或为 -1（无限制）');
+
         const shareToken = generateToken();
         let updatedFile = null;
+
+        let shareExpireAt = null;
+        if (expireDays !== -1) {
+            shareExpireAt = new Date(Date.now() + expireDays * 24 * 60 * 60 * 1000).toISOString();
+        }
 
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.FILES,
@@ -664,6 +645,10 @@ const Netdisk = {
                 if (!file) throw new Error('文件不存在或无权操作');
                 file.shared = true;
                 file.shareToken = shareToken;
+                file.shareExpireDays = expireDays;
+                file.shareExpireAt = shareExpireAt;
+                file.shareMaxDownloads = maxDownloads;
+                file.shareDownloadCount = 0;
                 updatedFile = file;
                 return data;
             },
@@ -671,7 +656,13 @@ const Netdisk = {
         );
 
         const shareUrl = `${CONFIG.getPagesUrl()}/shared.html?token=${shareToken}`;
-        return { success: true, shareUrl: shareUrl, shareToken: shareToken };
+        return {
+            success: true,
+            shareUrl: shareUrl,
+            shareToken: shareToken,
+            expireDays: expireDays,
+            maxDownloads: maxDownloads
+        };
     },
 
     // ============ 取消分享 ============
@@ -707,13 +698,47 @@ const Netdisk = {
 
         if (!file) throw new Error('分享链接无效或已被取消');
 
+        // 检查有效期
+        if (file.shareExpireAt) {
+            if (new Date(file.shareExpireAt) < new Date()) {
+                throw new Error('分享链接已过期');
+            }
+        }
+
+        // 检查下载次数限制
+        const maxDownloads = file.shareMaxDownloads !== undefined ? file.shareMaxDownloads : -1;
+        const downloadCount = file.shareDownloadCount || 0;
+        if (maxDownloads !== -1 && downloadCount >= maxDownloads) {
+            throw new Error('分享链接已达到下载次数上限');
+        }
+
+        // 递增下载次数
+        try {
+            await GitHubAPI.updateJsonData(
+                CONFIG.DATA.FILES,
+                (data) => {
+                    if (!data.files) data.files = [];
+                    const f = data.files.find(x => x.shareToken === shareToken);
+                    if (f) {
+                        f.shareDownloadCount = (f.shareDownloadCount || 0) + 1;
+                    }
+                    return data;
+                },
+                '分享下载次数递增'
+            );
+        } catch (e) {
+        }
+
         const rawUrl = GitHubAPI.getRawUrl(file.path);
         return {
             name: file.name,
             size: file.size,
             type: file.type,
             url: rawUrl,
-            uploadedAt: file.uploadedAt
+            uploadedAt: file.uploadedAt,
+            expireDays: file.shareExpireDays !== undefined ? file.shareExpireDays : -1,
+            maxDownloads: maxDownloads,
+            downloadCount: downloadCount + 1
         };
     },
 
@@ -744,20 +769,17 @@ const Netdisk = {
 
     // ============ 管理员功能 ============
 
-    // 检查当前用户是否为管理员
     isAdmin() {
         const user = this.getCurrentUserLocal();
         return user && user.role === 'admin';
     },
 
-    // 管理员权限守卫
     requireAdmin() {
         if (!this.isAdmin()) {
             throw new Error('无管理员权限');
         }
     },
 
-    // 创建管理员账户（仅当系统中还没有管理员时可用）
     async createAdminAccount(username, email, password) {
         if (!username || username.trim().length < 2) throw new Error('用户名至少需要 2 个字符');
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('请输入有效的邮箱地址');
@@ -766,7 +788,6 @@ const Netdisk = {
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
         const users = (data && data.users) || [];
 
-        // 检查是否已有管理员
         if (users.some(u => u.role === 'admin')) {
             throw new Error('系统中已存在管理员账户');
         }
@@ -784,7 +805,7 @@ const Netdisk = {
             salt: salt,
             role: 'admin',
             status: 'active',
-            verified: true,          // 管理员自动验证
+            verified: true,
             verificationToken: null,
             resetToken: null,
             resetTokenExpiry: null,
@@ -804,7 +825,6 @@ const Netdisk = {
         return { success: true, message: '管理员账户创建成功', user: { id: adminUser.id, username: adminUser.username, email: adminUser.email, role: 'admin' } };
     },
 
-    // 查看所有用户（管理员）
     async adminListUsers() {
         this.requireAdmin();
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
@@ -820,12 +840,10 @@ const Netdisk = {
         }));
     },
 
-    // 查看所有文件（管理员）
     async adminListFiles() {
         this.requireAdmin();
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
         const files = (data && data.files) || [];
-        // 获取用户名映射
         const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
         const users = (usersData.data && usersData.data.users) || [];
         const userMap = {};
@@ -839,12 +857,11 @@ const Netdisk = {
             ownerId: f.ownerId,
             ownerName: userMap[f.ownerId] || '未知用户',
             shared: f.shared,
-            status: f.status || 'normal',   // normal / taken_down
+            status: f.status || 'normal',
             uploadedAt: f.uploadedAt
         }));
     },
 
-    // 下架文件（管理员） - 取消分享并标记为下架
     async adminTakeDownFile(fileId) {
         this.requireAdmin();
         let updatedFile = null;
@@ -867,7 +884,6 @@ const Netdisk = {
         return { success: true, message: '文件已下架', file: updatedFile };
     },
 
-    // 恢复文件（管理员） - 取消下架状态
     async adminRestoreFile(fileId) {
         this.requireAdmin();
         let updatedFile = null;
@@ -888,7 +904,6 @@ const Netdisk = {
         return { success: true, message: '文件已恢复', file: updatedFile };
     },
 
-    // 删除文件（管理员） - 删除任意用户的文件
     async adminDeleteFile(fileId) {
         this.requireAdmin();
         let deletedFile = null;
@@ -898,13 +913,11 @@ const Netdisk = {
         deletedFile = files.find(f => f.id === fileId);
         if (!deletedFile) throw new Error('文件不存在');
 
-        // 删除存储的文件
         const fileInfo = await GitHubAPI.getContent(deletedFile.path);
         if (fileInfo) {
             await GitHubAPI.deleteFile(deletedFile.path, `管理员删除文件: ${deletedFile.name}`, fileInfo.sha);
         }
 
-        // 删除文件元数据
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.FILES,
             (data) => {
@@ -918,27 +931,23 @@ const Netdisk = {
         return { success: true, message: '文件已删除' };
     },
 
-    // 禁用用户（管理员） - 禁止登录
     async adminDisableUser(userId) {
         this.requireAdmin();
         await this._setUserStatus(userId, 'disabled', '禁用');
         return { success: true, message: '用户已禁用' };
     },
 
-    // 冻结用户（管理员） - 禁止登录，保留数据
     async adminFreezeUser(userId) {
         this.requireAdmin();
         await this._setUserStatus(userId, 'frozen', '冻结');
         return { success: true, message: '用户已冻结' };
     },
 
-    // 注销用户（管理员） - 删除账户及所有文件
     async adminDeleteUser(userId) {
         this.requireAdmin();
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error('不能注销自己的账户');
 
-        // 删除该用户的所有文件
         const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
         const files = (filesData && filesData.files) || [];
         const userFiles = files.filter(f => f.ownerId === userId);
@@ -950,11 +959,9 @@ const Netdisk = {
                     await GitHubAPI.deleteFile(file.path, `注销用户删除文件: ${file.name}`, fileInfo.sha);
                 }
             } catch (e) {
-                // 忽略单个文件删除失败
             }
         }
 
-        // 删除用户文件元数据
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.FILES,
             (data) => {
@@ -965,7 +972,6 @@ const Netdisk = {
             `注销用户删除文件元数据`
         );
 
-        // 删除用户会话
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.SESSIONS,
             (data) => {
@@ -976,7 +982,6 @@ const Netdisk = {
             `注销用户删除会话`
         );
 
-        // 删除用户账户
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.USERS,
             (data) => {
@@ -990,7 +995,6 @@ const Netdisk = {
         return { success: true, message: '用户已注销，账户及所有文件已删除' };
     },
 
-    // 内部工具：设置用户状态
     async _setUserStatus(userId, status, label) {
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error(`不能${label}自己的账户`);
@@ -1008,7 +1012,6 @@ const Netdisk = {
             `管理员${label}用户: ${userId}`
         );
 
-        // 清除该用户的所有会话
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.SESSIONS,
             (data) => {

@@ -1,0 +1,152 @@
+# GitHub Netdisk - 基于 GitHub 的网盘系统
+
+一个完全运行在 GitHub 上的轻量级网盘系统，使用 GitHub 仓库作为文件存储，GitHub Actions 发送邮件，GitHub Pages 托管前端。
+
+## 功能特性
+
+- **用户注册/登录** - 邮箱+密码注册，PBKDF2 哈希存储（100,000 次迭代 + 随机盐）
+- **邮箱验证** - 注册后发送验证邮件，点击链接激活账号
+- **密码管理** - 支持修改密码、忘记密码重置（邮件链接重置）
+- **文件存储** - 文件直接存储在 GitHub 仓库中
+- **文件上传** - 支持拖拽上传，最大 50MB
+- **文件下载** - 通过 GitHub raw URL 直接下载
+- **文件分享** - 生成分享链接，任何人可通过链接下载
+- **文件管理** - 查看文件列表、删除文件、取消分享
+
+## 技术架构
+
+```
+┌─────────────────────────────────────────────┐
+│              浏览器（用户端）                  │
+│  纯 HTML/JS/CSS → GitHub Pages 托管          │
+├─────────────┬───────────────────────────────┤
+│  GitHub API │  Repository Dispatch API       │
+│  (文件读写)  │  (触发邮件发送 Action)          │
+├─────────────┼───────────────────────────────┤
+│             ▼                                │
+│  GitHub 仓库（存储层）                         │
+│  ├── data/users.json    用户数据             │
+│  ├── data/files.json    文件元数据            │
+│  ├── data/sessions.json 会话数据             │
+│  └── storage/           实际文件             │
+├─────────────────────────────────────────────┤
+│  GitHub Actions（后端）                       │
+│  └── send-email.yml     邮件发送工作流        │
+└─────────────────────────────────────────────┘
+```
+
+## 部署步骤
+
+### 1. 创建仓库
+
+将本项目代码推送到你的 GitHub 仓库（可以 Fork 或直接上传）。
+
+### 2. 启用 GitHub Pages
+
+进入仓库 **Settings → Pages**，选择 `Deploy from a branch`，分支选 `main`，目录选 `/ (root)`，保存。
+
+### 3. 配置邮件 Secrets
+
+进入仓库 **Settings → Secrets and variables → Actions → New repository secret**，依次添加以下密钥：
+
+| Secret 名称 | 说明 | 示例值 |
+|---|---|---|
+| `SMTP_SERVER` | SMTP 服务器地址 | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP 端口 | `465` |
+| `SMTP_USERNAME` | SMTP 用户名（邮箱） | `you@gmail.com` |
+| `SMTP_PASSWORD` | SMTP 密码/授权码 | `your-app-password` |
+| `SMTP_FROM` | 发件人邮箱 | `you@gmail.com` |
+
+> **Gmail 用户注意**：需要使用「应用专用密码」而非账号密码。在 Google 账户设置中开启两步验证后生成应用专用密码。
+
+### 4. 生成 GitHub Token
+
+1. 访问 [GitHub Token 生成页](https://github.com/settings/tokens)
+2. 点击 **Generate new token (classic)**
+3. 勾选 `repo` 权限（完整仓库访问）
+4. 生成并复制 Token
+
+### 5. 初始化配置
+
+1. 访问 `https://你的用户名.github.io/仓库名/setup.html`
+2. 填写 GitHub 用户名、仓库名、Token
+3. 点击保存，验证通过后自动跳转登录页
+
+### 6. 开始使用
+
+- 注册账号 → 收到验证邮件 → 点击验证链接 → 登录 → 上传/分享文件
+
+## 项目结构
+
+```
+github-netdisk/
+├── index.html              # 主页（文件管理仪表盘）
+├── login.html              # 登录页
+├── register.html           # 注册页
+├── verify.html             # 邮箱验证页
+├── reset.html              # 密码重置请求页
+├── reset-confirm.html      # 设置新密码页
+├── shared.html             # 分享文件下载页（公开）
+├── setup.html              # 初始配置页
+├── .nojekyll               # 禁用 GitHub Pages Jekyll 处理
+├── .github/workflows/
+│   └── send-email.yml      # 邮件发送 GitHub Action
+├── css/
+│   └── style.css           # 全局样式
+├── js/
+│   ├── config.js           # 配置文件
+│   ├── github.js           # GitHub API 封装
+│   ├── netdisk.js          # 核心业务逻辑
+│   └── ui.js               # UI 工具函数
+├── data/
+│   ├── users.json          # 用户数据（运行时自动管理）
+│   ├── files.json          # 文件元数据（运行时自动管理）
+│   └── sessions.json       # 会话数据（运行时自动管理）
+└── storage/                # 文件存储目录（运行时自动管理）
+```
+
+## 安全说明
+
+> **此项目为个人/演示用途设计，存在以下安全限制，请知悉：**
+
+1. **密码哈希存储**：密码使用 PBKDF2 (SHA-256, 100,000 次迭代) + 随机盐哈希后存储在 `data/users.json` 中。哈希不可逆，无法从存储数据还原原始密码。
+2. **Token 暴露**：GitHub Token 存储在浏览器 localStorage 中，可被客户端查看。建议使用 Fine-grained PAT 并仅授予目标仓库的 `Contents: Read and Write` 权限。
+3. **API 速率限制**：GitHub API 有速率限制（认证用户 5000 次/小时），高并发场景可能触发限制。
+4. **无加密传输**：文件以 Base64 编码存储在仓库中，无额外加密。
+
+如需生产环境使用，建议：
+- 引入后端服务代理 API 调用，避免 Token 暴露
+- 文件加密后存储
+- 限制注册用户数量
+
+## API 速率限制
+
+| 操作类型 | 预计 API 调用次数 |
+|---|---|
+| 注册 | 2-3 次（读+写+dispatch） |
+| 登录 | 2 次（读 users + 读 sessions） |
+| 上传文件 | 2 次（写文件+写元数据） |
+| 列出文件 | 1 次 |
+| 下载文件 | 1 次 |
+| 分享文件 | 1 次 |
+
+## 常见问题
+
+**Q: 文件大小限制是多少？**
+A: 最大 50MB。GitHub Contents API 支持到 100MB，为稳定性限制为 50MB。
+
+**Q: 仓库空间有限制吗？**
+A: GitHub 建议仓库不超过 1GB，硬限制 5GB。大量大文件建议使用 Git LFS 或其他存储方案。
+
+**Q: 邮件发送延迟怎么办？**
+A: GitHub Actions 有冷启动时间，邮件通常在 10-30 秒内送达。如长时间未收到，检查 Actions 运行日志。
+
+**Q: 可以多个用户同时使用吗？**
+A: 可以，但并发写入同一数据文件时可能有冲突。系统已内置 3 次重试机制。
+
+## 技术栈
+
+- **前端**：纯 HTML/CSS/JavaScript（无框架依赖）
+- **存储**：GitHub Repository Contents API
+- **邮件**：GitHub Actions + dawidd6/action-send-mail
+- **托管**：GitHub Pages

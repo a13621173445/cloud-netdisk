@@ -356,6 +356,13 @@ body {
     color: var(--error);
 }
 
+.btn-icon-img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    display: block;
+}
+
 /* ============ 空状态 ============ */
 .empty-state {
     text-align: center;

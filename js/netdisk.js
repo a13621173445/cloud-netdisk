@@ -113,6 +113,8 @@ const Netdisk = {
             email: email.trim(),
             passwordHash: passwordHash,
             salt: salt,
+            role: 'user',           // 角色: user / admin
+            status: 'active',       // 状态: active / disabled / frozen / deleted
             verified: false,
             verificationToken: verificationToken,
             resetToken: null,
@@ -207,6 +209,12 @@ const Netdisk = {
         if (!isValid) throw new Error('邮箱或密码错误');
         if (!user.verified) throw new Error('请先验证邮箱后再登录');
 
+        // 检查账户状态
+        const status = user.status || 'active';
+        if (status === 'disabled') throw new Error('该账户已被禁用，请联系管理员');
+        if (status === 'frozen') throw new Error('该账户已被冻结，请联系管理员');
+        if (status === 'deleted') throw new Error('该账户已注销，无法登录');
+
         // 创建会话
         const sessionToken = generateToken();
         const session = {
@@ -234,13 +242,15 @@ const Netdisk = {
             id: user.id,
             username: user.username,
             email: user.email,
-            verified: user.verified
+            verified: user.verified,
+            role: user.role || 'user',
+            status: status
         }));
 
         return {
             success: true,
             token: sessionToken,
-            user: { id: user.id, username: user.username, email: user.email, verified: user.verified }
+            user: { id: user.id, username: user.username, email: user.email, verified: user.verified, role: user.role || 'user', status: status }
         };
     },
 
@@ -307,11 +317,20 @@ const Netdisk = {
             return null;
         }
 
+        // 检查账户状态，非 active 状态强制登出
+        const status = user.status || 'active';
+        if (status !== 'active') {
+            this.logout();
+            return null;
+        }
+
         return {
             id: user.id,
             username: user.username,
             email: user.email,
-            verified: user.verified
+            verified: user.verified,
+            role: user.role || 'user',
+            status: status
         };
     },
 
@@ -626,5 +645,283 @@ const Netdisk = {
         await this.sendVerificationEmail(email, newToken);
 
         return { success: true, message: '验证邮件已重新发送' };
+    },
+
+    // ============ 管理员功能 ============
+
+    // 检查当前用户是否为管理员
+    isAdmin() {
+        const user = this.getCurrentUserLocal();
+        return user && user.role === 'admin';
+    },
+
+    // 管理员权限守卫
+    requireAdmin() {
+        if (!this.isAdmin()) {
+            throw new Error('无管理员权限');
+        }
+    },
+
+    // 创建管理员账户（仅当系统中还没有管理员时可用）
+    async createAdminAccount(username, email, password) {
+        if (!username || username.trim().length < 2) throw new Error('用户名至少需要 2 个字符');
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('请输入有效的邮箱地址');
+        if (!password || password.length < 6) throw new Error('密码至少需要 6 个字符');
+
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (data && data.users) || [];
+
+        // 检查是否已有管理员
+        if (users.some(u => u.role === 'admin')) {
+            throw new Error('系统中已存在管理员账户');
+        }
+        if (users.some(u => u.email === email)) {
+            throw new Error('该邮箱已被注册');
+        }
+
+        const salt = await generateSalt();
+        const passwordHash = await hashPassword(password, salt);
+        const adminUser = {
+            id: generateId(),
+            username: username.trim(),
+            email: email.trim(),
+            passwordHash: passwordHash,
+            salt: salt,
+            role: 'admin',
+            status: 'active',
+            verified: true,          // 管理员自动验证
+            verificationToken: null,
+            resetToken: null,
+            resetTokenExpiry: null,
+            createdAt: new Date().toISOString()
+        };
+
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                data.users.push(adminUser);
+                return data;
+            },
+            `创建管理员账户: ${username}`
+        );
+
+        return { success: true, message: '管理员账户创建成功', user: { id: adminUser.id, username: adminUser.username, email: adminUser.email, role: 'admin' } };
+    },
+
+    // 查看所有用户（管理员）
+    async adminListUsers() {
+        this.requireAdmin();
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (data && data.users) || [];
+        return users.map(u => ({
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            role: u.role || 'user',
+            status: u.status || 'active',
+            verified: u.verified,
+            createdAt: u.createdAt
+        }));
+    },
+
+    // 查看所有文件（管理员）
+    async adminListFiles() {
+        this.requireAdmin();
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (data && data.files) || [];
+        // 获取用户名映射
+        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData.data && usersData.data.users) || [];
+        const userMap = {};
+        users.forEach(u => userMap[u.id] = u.username);
+
+        return files.map(f => ({
+            id: f.id,
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            ownerId: f.ownerId,
+            ownerName: userMap[f.ownerId] || '未知用户',
+            shared: f.shared,
+            status: f.status || 'normal',   // normal / taken_down
+            uploadedAt: f.uploadedAt
+        }));
+    },
+
+    // 下架文件（管理员） - 取消分享并标记为下架
+    async adminTakeDownFile(fileId) {
+        this.requireAdmin();
+        let updatedFile = null;
+
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.FILES,
+            (data) => {
+                if (!data.files) data.files = [];
+                const file = data.files.find(f => f.id === fileId);
+                if (!file) throw new Error('文件不存在');
+                file.shared = false;
+                file.shareToken = null;
+                file.status = 'taken_down';
+                updatedFile = file;
+                return data;
+            },
+            `管理员下架文件: ${fileId}`
+        );
+
+        return { success: true, message: '文件已下架', file: updatedFile };
+    },
+
+    // 恢复文件（管理员） - 取消下架状态
+    async adminRestoreFile(fileId) {
+        this.requireAdmin();
+        let updatedFile = null;
+
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.FILES,
+            (data) => {
+                if (!data.files) data.files = [];
+                const file = data.files.find(f => f.id === fileId);
+                if (!file) throw new Error('文件不存在');
+                file.status = 'normal';
+                updatedFile = file;
+                return data;
+            },
+            `管理员恢复文件: ${fileId}`
+        );
+
+        return { success: true, message: '文件已恢复', file: updatedFile };
+    },
+
+    // 删除文件（管理员） - 删除任意用户的文件
+    async adminDeleteFile(fileId) {
+        this.requireAdmin();
+        let deletedFile = null;
+
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (data && data.files) || [];
+        deletedFile = files.find(f => f.id === fileId);
+        if (!deletedFile) throw new Error('文件不存在');
+
+        // 删除存储的文件
+        const fileInfo = await GitHubAPI.getContent(deletedFile.path);
+        if (fileInfo) {
+            await GitHubAPI.deleteFile(deletedFile.path, `管理员删除文件: ${deletedFile.name}`, fileInfo.sha);
+        }
+
+        // 删除文件元数据
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.FILES,
+            (data) => {
+                if (!data.files) data.files = [];
+                data.files = data.files.filter(f => f.id !== fileId);
+                return data;
+            },
+            `管理员删除文件元数据: ${deletedFile.name}`
+        );
+
+        return { success: true, message: '文件已删除' };
+    },
+
+    // 禁用用户（管理员） - 禁止登录
+    async adminDisableUser(userId) {
+        this.requireAdmin();
+        await this._setUserStatus(userId, 'disabled', '禁用');
+        return { success: true, message: '用户已禁用' };
+    },
+
+    // 冻结用户（管理员） - 禁止登录，保留数据
+    async adminFreezeUser(userId) {
+        this.requireAdmin();
+        await this._setUserStatus(userId, 'frozen', '冻结');
+        return { success: true, message: '用户已冻结' };
+    },
+
+    // 注销用户（管理员） - 删除账户及所有文件
+    async adminDeleteUser(userId) {
+        this.requireAdmin();
+        const currentUser = this.getCurrentUserLocal();
+        if (currentUser.id === userId) throw new Error('不能注销自己的账户');
+
+        // 删除该用户的所有文件
+        const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (filesData && filesData.files) || [];
+        const userFiles = files.filter(f => f.ownerId === userId);
+
+        for (const file of userFiles) {
+            try {
+                const fileInfo = await GitHubAPI.getContent(file.path);
+                if (fileInfo) {
+                    await GitHubAPI.deleteFile(file.path, `注销用户删除文件: ${file.name}`, fileInfo.sha);
+                }
+            } catch (e) {
+                // 忽略单个文件删除失败
+            }
+        }
+
+        // 删除用户文件元数据
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.FILES,
+            (data) => {
+                if (!data.files) data.files = [];
+                data.files = data.files.filter(f => f.ownerId !== userId);
+                return data;
+            },
+            `注销用户删除文件元数据`
+        );
+
+        // 删除用户会话
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.SESSIONS,
+            (data) => {
+                if (!data.sessions) data.sessions = [];
+                data.sessions = data.sessions.filter(s => s.userId !== userId);
+                return data;
+            },
+            `注销用户删除会话`
+        );
+
+        // 删除用户账户
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                data.users = data.users.filter(u => u.id !== userId);
+                return data;
+            },
+            `注销用户账户`
+        );
+
+        return { success: true, message: '用户已注销，账户及所有文件已删除' };
+    },
+
+    // 内部工具：设置用户状态
+    async _setUserStatus(userId, status, label) {
+        const currentUser = this.getCurrentUserLocal();
+        if (currentUser.id === userId) throw new Error(`不能${label}自己的账户`);
+
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const user = data.users.find(u => u.id === userId);
+                if (!user) throw new Error('用户不存在');
+                if (user.role === 'admin') throw new Error(`不能${label}管理员账户`);
+                user.status = status;
+                return data;
+            },
+            `管理员${label}用户: ${userId}`
+        );
+
+        // 清除该用户的所有会话
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.SESSIONS,
+            (data) => {
+                if (!data.sessions) data.sessions = [];
+                data.sessions = data.sessions.filter(s => s.userId !== userId);
+                return data;
+            },
+            `管理员${label}用户清除会话`
+        );
     }
 };

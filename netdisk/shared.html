@@ -17,13 +17,13 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=7"></script>
-    <script src="js/github.js?v=5"></script>
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=11"></script>
     <script src="js/ui.js?v=8"></script>
     <script>
         (async () => {
-            if (!CONFIG.isConfigured()) {
+            if (!(await CONFIG.isConfigured())) {
                 document.getElementById('share-content').innerHTML = `
                     <div class="result-icon">⚠️</div>
                     <h2>配置错误</h2>

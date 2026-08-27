@@ -598,6 +598,111 @@ ${verifyUrl}
         return { success: true, message: '邮箱修改成功！请查收验证邮件完成新邮箱验证。' };
     },
 
+    // ============ 注销自己的账户 ============
+
+    async deleteMyAccount(password) {
+        const currentUser = this.getCurrentUserLocal();
+        if (!currentUser) throw new Error('请先登录');
+        if (!password) throw new Error('请输入当前密码以确认注销');
+
+        // 验证密码
+        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData && usersData.users) || [];
+        const user = users.find(u => u.id === currentUser.id);
+        if (!user) throw new Error('用户不存在');
+        const isValid = await verifyPassword(password, user.salt, user.passwordHash);
+        if (!isValid) throw new Error('密码错误');
+
+        // 超级管理员不能注销自己
+        if (user.role === 'superadmin') throw new Error('超级管理员不能注销自己的账户');
+
+        // 删除该用户的所有文件
+        const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (filesData && filesData.files) || [];
+        const userFiles = files.filter(f => f.ownerId === currentUser.id);
+
+        for (const file of userFiles) {
+            try {
+                const fileInfo = await GitHubAPI.getContent(file.path);
+                if (fileInfo) {
+                    await GitHubAPI.deleteFile(file.path, `注销账户删除文件: ${file.name}`, fileInfo.sha);
+                }
+            } catch (e) {
+                // 忽略单个文件删除失败
+            }
+        }
+
+        // 删除用户文件元数据
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.FILES,
+            (data) => {
+                if (!data.files) data.files = [];
+                data.files = data.files.filter(f => f.ownerId !== currentUser.id);
+                return data;
+            },
+            '注销账户删除文件元数据'
+        );
+
+        // 删除用户会话
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.SESSIONS,
+            (data) => {
+                if (!data.sessions) data.sessions = [];
+                data.sessions = data.sessions.filter(s => s.userId !== currentUser.id);
+                return data;
+            },
+            '注销账户删除会话'
+        );
+
+        // 删除用户账户
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                data.users = data.users.filter(u => u.id !== currentUser.id);
+                return data;
+            },
+            '注销账户'
+        );
+
+        // 清除本地登录状态
+        this.logout();
+
+        return { success: true, message: '账户已注销，所有数据已删除' };
+    },
+
+    // ============ 申请解冻/解禁 ============
+
+    async requestUnfreeze() {
+        const currentUser = this.getCurrentUserLocal();
+        if (!currentUser) throw new Error('请先登录');
+
+        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData && usersData.users) || [];
+        const user = users.find(u => u.id === currentUser.id);
+        if (!user) throw new Error('用户不存在');
+
+        const status = user.status || 'active';
+        if (status === 'active') throw new Error('账户状态正常，无需申请解冻');
+        if (status === 'deleted') throw new Error('账户已注销，无法申请解冻');
+
+        // 设置申请解冻标记
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const u = data.users.find(x => x.id === currentUser.id);
+                if (!u) throw new Error('用户不存在');
+                u.unfreezeRequested = true;
+                u.unfreezeRequestedAt = new Date().toISOString();
+                return data;
+            },
+            '申请解冻/解禁'
+        );
+
+        return { success: true, message: '解冻申请已提交，请等待管理员处理' };
+    },
+
     // ============ 文件上传 ============
 
     async uploadFile(file) {
@@ -1096,6 +1201,21 @@ ${verifyUrl}
         this.requireAdmin();
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error('不能注销自己的账户');
+        const currentRole = currentUser.role || 'user';
+
+        // 权限检查：先读取目标用户角色
+        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const allUsers = (usersData && usersData.users) || [];
+        const targetUser = allUsers.find(u => u.id === userId);
+        if (!targetUser) throw new Error('用户不存在');
+        const targetRole = targetUser.role || 'user';
+
+        // 超级管理员永不被注销
+        if (targetRole === 'superadmin') throw new Error('不能注销超级管理员账户');
+        // 管理员不能注销管理员和超级管理员，只能注销普通用户
+        if (currentRole === 'admin' && targetRole !== 'user') throw new Error('不能注销管理员账户');
+        // 普通用户无操作权限
+        if (currentRole !== 'admin' && currentRole !== 'superadmin') throw new Error('无操作权限');
 
         // 删除该用户的所有文件
         const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
@@ -1153,6 +1273,7 @@ ${verifyUrl}
     async _setUserStatus(userId, status, label) {
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error(`不能${label}自己的账户`);
+        const currentRole = currentUser.role || 'user';
 
         await GitHubAPI.updateJsonData(
             CONFIG.DATA.USERS,
@@ -1160,7 +1281,15 @@ ${verifyUrl}
                 if (!data.users) data.users = [];
                 const user = data.users.find(u => u.id === userId);
                 if (!user) throw new Error('用户不存在');
-                if (user.role === 'admin' || user.role === 'superadmin') throw new Error(`不能${label}管理员账户`);
+                const targetRole = user.role || 'user';
+
+                // 超级管理员永不被操作
+                if (targetRole === 'superadmin') throw new Error(`不能${label}超级管理员账户`);
+                // 管理员不能操作管理员和超级管理员，只能操作普通用户
+                if (currentRole === 'admin' && targetRole !== 'user') throw new Error(`不能${label}管理员账户`);
+                // 普通用户无操作权限
+                if (currentRole !== 'admin' && currentRole !== 'superadmin') throw new Error('无操作权限');
+
                 user.status = status;
                 return data;
             },

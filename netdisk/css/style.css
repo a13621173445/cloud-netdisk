@@ -473,6 +473,57 @@ body {
     min-width: 90px;
 }
 
+/* ============ 账户管理页面 ============ */
+.account-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+}
+
+.account-card h3 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: var(--text);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.account-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+}
+
+.account-row:last-child {
+    border-bottom: none;
+}
+
+.account-label {
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.account-value {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.account-card .btn {
+    margin-top: 8px;
+}
+
 .share-link-box {
     display: flex;
     gap: 8px;

@@ -152,16 +152,15 @@ const Netdisk = {
 
     async sendVerificationEmail(email, token) {
         const verifyUrl = `${CONFIG.getPagesUrl()}/verify.html?token=${token}`;
-        const body = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #4F46E5;">验证你的邮箱地址</h2>
-                <p>感谢注册 GitHub Netdisk！请点击下方按钮验证你的邮箱：</p>
-                <a href="${verifyUrl}" style="display: inline-block; background: #4F46E5; color: #fff; padding: 12px 32px; text-decoration: none; border-radius: 6px; margin: 16px 0;">验证邮箱</a>
-                <p style="color: #666; font-size: 14px;">或复制此链接到浏览器：<br>${verifyUrl}</p>
-                <hr style="border: none; border-top: 1px solid #eee;">
-                <p style="color: #999; font-size: 12px;">此邮件由系统自动发送，请勿回复。</p>
-            </div>
-        `;
+        const body = `验证你的邮箱地址
+
+感谢注册 GitHub Netdisk！请点击下方链接验证你的邮箱：
+
+${verifyUrl}
+
+如果链接无法点击，请复制以上链接到浏览器地址栏打开。
+
+此邮件由系统自动发送，请勿回复。`;
 
         await GitHubAPI.dispatchEvent('send-email', {
             to: email,

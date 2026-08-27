@@ -153,7 +153,7 @@
     <script src="js/config.js?v=5"></script>
     <script src="js/github.js?v=5"></script>
     <script src="js/netdisk.js?v=5"></script>
-    <script src="js/ui.js?v=8"></script>
+    <script src="js/ui.js?v=10"></script>
     <script>
         const Admin = {
             currentUser: null,
@@ -310,7 +310,8 @@
             },
 
             async disableUser(userId) {
-                if (!confirm('确定要禁用该用户吗？禁用后该用户将无法登录。')) return;
+                const confirmed = await UI.confirm('确定要禁用该用户吗？禁用后该用户将无法登录。', '禁用用户', '禁用', '取消');
+                if (!confirmed) return;
                 try {
                     UI.showLoading('处理中...');
                     await Netdisk.adminDisableUser(userId);
@@ -324,7 +325,8 @@
             },
 
             async freezeUser(userId) {
-                if (!confirm('确定要冻结该用户吗？冻结后该用户将无法登录，但数据会保留。')) return;
+                const confirmed = await UI.confirm('确定要冻结该用户吗？冻结后该用户将无法登录，但数据会保留。', '冻结用户', '冻结', '取消');
+                if (!confirmed) return;
                 try {
                     UI.showLoading('处理中...');
                     await Netdisk.adminFreezeUser(userId);
@@ -338,7 +340,8 @@
             },
 
             async deleteUser(userId) {
-                if (!confirm('确定要注销该用户吗？将删除该用户账户及其所有文件，此操作不可恢复！')) return;
+                const confirmed = await UI.confirm('确定要注销该用户吗？将删除该用户账户及其所有文件，此操作不可恢复！', '注销用户', '注销', '取消');
+                if (!confirmed) return;
                 try {
                     UI.showLoading('处理中...');
                     await Netdisk.adminDeleteUser(userId);
@@ -352,7 +355,8 @@
             },
 
             async takeDownFile(fileId) {
-                if (!confirm('确定要下架该文件吗？下架后分享链接将失效。')) return;
+                const confirmed = await UI.confirm('确定要下架该文件吗？下架后分享链接将失效。', '下架文件', '下架', '取消');
+                if (!confirmed) return;
                 try {
                     UI.showLoading('处理中...');
                     await Netdisk.adminTakeDownFile(fileId);
@@ -379,7 +383,8 @@
             },
 
             async deleteFile(fileId) {
-                if (!confirm('确定要删除该文件吗？此操作不可恢复！')) return;
+                const confirmed = await UI.confirm('确定要删除该文件吗？此操作不可恢复！', '删除文件', '删除', '取消');
+                if (!confirmed) return;
                 try {
                     UI.showLoading('处理中...');
                     await Netdisk.adminDeleteFile(fileId);

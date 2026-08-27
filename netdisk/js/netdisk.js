@@ -868,10 +868,16 @@ const Netdisk = {
 
     // ============ 管理员功能 ============
 
-    // 检查当前用户是否为管理员
+    // 检查当前用户是否为管理员（admin 或 superadmin）
     isAdmin() {
         const user = this.getCurrentUserLocal();
-        return user && user.role === 'admin';
+        return user && (user.role === 'admin' || user.role === 'superadmin');
+    },
+
+    // 检查当前用户是否为超级管理员
+    isSuperAdmin() {
+        const user = this.getCurrentUserLocal();
+        return user && user.role === 'superadmin';
     },
 
     // 管理员权限守卫
@@ -879,6 +885,36 @@ const Netdisk = {
         if (!this.isAdmin()) {
             throw new Error('无管理员权限');
         }
+    },
+
+    // 设置/取消管理员角色（仅超级管理员可操作）
+    // @param {string} userId - 目标用户 ID
+    // @param {boolean} makeAdmin - true 设为管理员，false 取消管理员
+    async setAdminRole(userId, makeAdmin) {
+        if (!this.isSuperAdmin()) {
+            throw new Error('仅超级管理员可设置管理员角色');
+        }
+        const currentUser = this.getCurrentUserLocal();
+        if (currentUser.id === userId) {
+            throw new Error('不能修改自己的管理员角色');
+        }
+
+        let updatedUser = null;
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const user = data.users.find(u => u.id === userId);
+                if (!user) throw new Error('用户不存在');
+                if (user.role === 'superadmin') throw new Error('不能修改超级管理员的角色');
+                user.role = makeAdmin ? 'admin' : 'user';
+                updatedUser = user;
+                return data;
+            },
+            makeAdmin ? '设置管理员' : '取消管理员'
+        );
+
+        return { success: true, message: makeAdmin ? '已设置为管理员' : '已取消管理员', user: updatedUser };
     },
 
     // 创建管理员账户（仅当系统中还没有管理员时可用）
@@ -1125,7 +1161,7 @@ const Netdisk = {
                 if (!data.users) data.users = [];
                 const user = data.users.find(u => u.id === userId);
                 if (!user) throw new Error('用户不存在');
-                if (user.role === 'admin') throw new Error(`不能${label}管理员账户`);
+                if (user.role === 'admin' || user.role === 'superadmin') throw new Error(`不能${label}管理员账户`);
                 user.status = status;
                 return data;
             },

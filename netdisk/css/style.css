@@ -447,6 +447,32 @@ body {
     min-width: 100px;
 }
 
+/* ============ 确认弹窗 ============ */
+.confirm-modal {
+    max-width: 400px;
+    text-align: center;
+}
+
+.confirm-modal h3 {
+    margin-bottom: 12px;
+}
+
+.confirm-message {
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.confirm-modal .modal-footer {
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.confirm-modal .modal-footer .btn {
+    min-width: 90px;
+}
+
 .share-link-box {
     display: flex;
     gap: 8px;

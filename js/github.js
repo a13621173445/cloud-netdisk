@@ -163,13 +163,15 @@ const GitHubAPI = {
                 return updatedData;
             } catch (error) {
                 lastError = error;
-                // 409 Conflict = SHA 不匹配（并发修改），等待后重试
-                if (error.message && error.message.includes('409') && i < maxRetries - 1) {
+                const msg = error.message || '';
+                // SHA 冲突（409 或 "does not match"）= 并发修改，等待后重试
+                const isConflict = msg.includes('409') || msg.includes('does not match') || msg.includes('sha') && msg.includes('match');
+                if (isConflict && i < maxRetries - 1) {
                     await new Promise(r => setTimeout(r, 1000 * (i + 1)));
                     continue;
                 }
                 // 文件不存在（404），直接创建
-                if (error.message && error.message.includes('404')) {
+                if (msg.includes('404')) {
                     const newData = updater({});
                     await this.createOrUpdateJson(path, newData, message, null);
                     return newData;

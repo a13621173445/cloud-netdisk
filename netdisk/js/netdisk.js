@@ -1341,6 +1341,40 @@ const Netdisk = {
         return { success: true, message: '用户已冻结' };
     },
 
+    // 恢复用户正常状态（管理员） - 解冻/解禁
+    async adminActivateUser(userId) {
+        this.requireAdmin();
+        const currentUser = this.getCurrentUserLocal();
+        if (currentUser.id === userId) throw new Error('不能操作自己的账户');
+        const currentRole = currentUser.role || 'user';
+
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.USERS,
+            (data) => {
+                if (!data.users) data.users = [];
+                const user = data.users.find(u => u.id === userId);
+                if (!user) throw new Error('用户不存在');
+                const targetRole = user.role || 'user';
+
+                // 超级管理员永不被操作
+                if (targetRole === 'superadmin') throw new Error('不能操作超级管理员账户');
+                // 管理员不能操作管理员
+                if (currentRole === 'admin' && targetRole !== 'user') throw new Error('不能操作管理员账户');
+                // 普通用户无操作权限
+                if (currentRole !== 'admin' && currentRole !== 'superadmin') throw new Error('无操作权限');
+
+                user.status = 'active';
+                user.statusReason = '';
+                user.statusUpdatedAt = new Date().toISOString();
+                user.statusUpdatedBy = currentUser.username;
+                return data;
+            },
+            `管理员恢复用户: ${userId}`
+        );
+
+        return { success: true, message: '用户已恢复为正常状态' };
+    },
+
     // 注销用户（管理员） - 删除账户及所有文件
     async adminDeleteUser(userId) {
         this.requireAdmin();

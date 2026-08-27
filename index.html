@@ -17,6 +17,7 @@
                     <span id="user-name">用户</span>
                 </div>
                 <button class="btn btn-secondary btn-sm" id="pwd-btn">修改密码</button>
+                <button class="btn btn-secondary btn-sm" id="admin-btn" style="display: none;">管理后台</button>
                 <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
             </div>
         </div>
@@ -116,6 +117,11 @@
                 // 显示用户信息
                 document.getElementById('user-name').textContent = this.currentUser.username;
                 document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                // 管理员显示管理后台入口
+                if (this.currentUser.role === 'admin') {
+                    document.getElementById('admin-btn').style.display = 'inline-flex';
+                }
 
                 // 初始化上传
                 this.initUpload();
@@ -239,6 +245,11 @@
                 document.getElementById('logout-btn').addEventListener('click', async () => {
                     await Netdisk.logout();
                     window.location.href = 'login.html';
+                });
+
+                // 管理后台
+                document.getElementById('admin-btn').addEventListener('click', () => {
+                    window.location.href = 'admin.html';
                 });
 
                 // 上传按钮

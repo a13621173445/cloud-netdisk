@@ -188,7 +188,7 @@ const UI = {
                 <div class="file-actions">
                     <button class="btn-icon" onclick="App.downloadFile('${this.escapeHtml(file.id)}')" title="下载">⬇</button>
                     <button class="btn-icon" onclick="App.shareFile('${this.escapeHtml(file.id)}')" title="分享">🔗</button>
-                    <button class="btn-icon btn-danger" onclick="App.deleteFile('${this.escapeHtml(file.id)}')" title="删除">🗑</button>
+                    <button class="btn-icon btn-danger" onclick="App.deleteFile('${this.escapeHtml(file.id)}')" title="删除"><img src="img/delete-icon.webp" alt="删除" class="btn-icon-img"></button>
                 </div>
             </div>
         `).join('');

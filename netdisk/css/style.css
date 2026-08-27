@@ -348,7 +348,7 @@ body {
 }
 
 .btn-icon.btn-danger {
-    color: var(--error);
+    color: var(--text);
 }
 
 .btn-icon.btn-danger:hover {

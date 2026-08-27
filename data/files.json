@@ -13,8 +13,7 @@
       "shareExpireDays": 7,
       "shareExpireAt": "2026-09-03T10:58:39.468Z",
       "shareMaxDownloads": 5,
-      "shareDownloadCount": 0,
-      "testField": "test"
+      "shareDownloadCount": 0
     }
   ]
 }

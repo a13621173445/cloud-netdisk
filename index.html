@@ -14,43 +14,35 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px 20px;
+            padding: 20px;
         }
         .landing-card {
-            max-width: 480px;
+            max-width: 420px;
             width: 100%;
             background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-            padding: 48px 40px;
+            border-radius: 18px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            padding: 48px 32px 36px;
             text-align: center;
         }
         .landing-card h1 {
             font-size: 28px;
             font-weight: 700;
-            margin-bottom: 8px;
-            color: #1d1d1f;
-        }
-        .landing-card p {
-            color: #86868b;
+            letter-spacing: -0.5px;
             margin-bottom: 36px;
-            font-size: 15px;
-        }
-        .landing-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            color: #1d1d1f;
         }
         .landing-btn {
             display: block;
             width: 100%;
             padding: 14px 20px;
+            margin-bottom: 12px;
             border: 1px solid #d2d2d7;
             border-radius: 10px;
             background: #ffffff;
             color: #1d1d1f;
             font-size: 15px;
-            cursor: pointer;
+            font-weight: 500;
             text-decoration: none;
             text-align: center;
             transition: all 0.2s;
@@ -62,8 +54,8 @@
         }
         .landing-btn.primary {
             background: #0071e3;
-            color: #ffffff;
             border-color: #0071e3;
+            color: #ffffff;
             font-weight: 600;
         }
         .landing-btn.primary:hover {
@@ -74,6 +66,7 @@
             display: block;
             width: 100%;
             padding: 14px 20px;
+            margin-bottom: 12px;
             border: 2px dashed #d2d2d7;
             border-radius: 10px;
             background: #fafafa;
@@ -86,15 +79,16 @@
 <body>
     <div class="landing-card">
         <h1>frpz.cc</h1>
-        <p>欢迎来到 frpz.cc</p>
-
-        <div class="landing-buttons">
-            <a href="netdisk/index.html" class="landing-btn primary">进入网盘</a>
-            <a href="netdisk/sponsor.html" class="landing-btn">赞助</a>
-            <div class="landing-btn-empty">— 预留 —</div>
-            <div class="landing-btn-empty">— 预留 —</div>
-            <div class="landing-btn-empty">— 预留 —</div>
-        </div>
+        <a href="login.html" class="landing-btn primary">进入网盘</a>
+        <a href="sponsor.html" class="landing-btn">赞助</a>
+        <div class="landing-btn-empty">— 预留 —</div>
+        <div class="landing-btn-empty">— 预留 —</div>
+        <div class="landing-btn-empty">— 预留 —</div>
     </div>
+    <script>
+        if (window.location.hostname === 'netdisk.frpz.cc' && (window.location.pathname === '/' || window.location.pathname === '')) {
+            window.location.replace('login.html');
+        }
+    </script>
 </body>
 </html>

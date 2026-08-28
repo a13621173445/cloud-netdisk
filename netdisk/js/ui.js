@@ -113,6 +113,12 @@ const UI = {
         });
     },
 
+    formatDateTime(dateString) {
+        const d = new Date(dateString);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    },
+
     // ============ 安全处理 ============
 
     escapeHtml(text) {

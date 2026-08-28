@@ -899,7 +899,7 @@ const Netdisk = {
 
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
         const files = (data && data.files) || [];
-        return files.filter(f => f.ownerId === currentUser.id);
+        return files.filter(f => f.ownerId === currentUser.id && !f.isGlobal);
     },
 
     // ============ 获取全局分享文件列表 ============

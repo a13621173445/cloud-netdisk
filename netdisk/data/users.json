@@ -44,6 +44,21 @@
       "resetToken": null,
       "resetTokenExpiry": null,
       "createdAt": "2026-08-28T05:49:40.748Z"
+    },
+    {
+      "id": "500a8e7b-16c8-49c4-a418-28db303ffe50",
+      "username": "NaTie",
+      "email": "guanziyang160724@outlook.com",
+      "passwordHash": "ae7a32d1f49652329bc1b15a641b577394b30567911090b920a6fa79e2200ba2",
+      "salt": "f64db1da00785ed9475b0054128c7189",
+      "role": "user",
+      "status": "active",
+      "verified": false,
+      "verificationCode": "932195",
+      "verificationCodeExpiry": "2026-08-28T07:40:04.070Z",
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-28T07:30:04.070Z"
     }
   ]
 }

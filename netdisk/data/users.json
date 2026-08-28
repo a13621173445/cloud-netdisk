@@ -29,6 +29,21 @@
       "resetToken": null,
       "resetTokenExpiry": null,
       "createdAt": "2026-08-28T05:29:44.781Z"
+    },
+    {
+      "id": "1a8bd14a-e314-416b-b6c6-214a3614f251",
+      "username": "awa",
+      "email": "2859004928@qq.com",
+      "passwordHash": "695a71cea024362f0b47e760e82567df800ea9295ac9ae2c12b69aa29d005148",
+      "salt": "55b432dd4cc270e725ff2eef5bd1bdac",
+      "role": "user",
+      "status": "active",
+      "verified": false,
+      "verificationCode": "354539",
+      "verificationCodeExpiry": "2026-08-28T05:59:40.748Z",
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-28T05:49:40.748Z"
     }
   ]
 }

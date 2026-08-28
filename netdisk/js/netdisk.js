@@ -1407,6 +1407,43 @@ const Netdisk = {
         }));
     },
 
+    // 按用户分组的文件统计（管理员）
+    async adminListFilesGroupedByUser() {
+        this.requireAdmin();
+        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData && usersData.users) || [];
+        const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (filesData && filesData.files) || [];
+
+        const groups = users.map(u => {
+            const userFiles = files.filter(f => f.ownerId === u.id);
+            return {
+                userId: u.id,
+                username: u.username,
+                fileCount: userFiles.length,
+                files: userFiles.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    size: f.size,
+                    type: f.type,
+                    isGlobal: f.isGlobal === true,
+                    status: f.status || 'normal',
+                    uploadedAt: f.uploadedAt
+                }))
+            };
+        });
+
+        // 排序：有文件的按用户名拼音升序在前，无文件的按拼音升序沉底
+        groups.sort((a, b) => {
+            const aEmpty = a.fileCount === 0;
+            const bEmpty = b.fileCount === 0;
+            if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+            return a.username.localeCompare(b.username, 'zh-CN');
+        });
+
+        return groups;
+    },
+
     // 下架文件（管理员） - 取消分享并标记为下架
     async adminTakeDownFile(fileId) {
         this.requireAdmin();

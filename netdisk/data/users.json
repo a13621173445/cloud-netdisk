@@ -74,6 +74,21 @@
       "resetToken": null,
       "resetTokenExpiry": null,
       "createdAt": "2026-08-28T07:31:54.157Z"
+    },
+    {
+      "id": "17a9813c-d030-4865-8cf0-f3dceb0c5e21",
+      "username": "XuDandan",
+      "email": "2834144972@qq.com",
+      "passwordHash": "89194de5981911dbd790577bc1f2a43b473652de532f75de113d92a5fb8c9eab",
+      "salt": "6722eb4251b046f67f39512790f55b6a",
+      "role": "user",
+      "status": "active",
+      "verified": false,
+      "verificationCode": "675539",
+      "verificationCodeExpiry": "2026-08-28T07:44:31.317Z",
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-28T07:34:31.321Z"
     }
   ]
 }

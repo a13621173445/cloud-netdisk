@@ -207,9 +207,11 @@ body {
 }
 
 .navbar-sponsor:hover {
-    background: var(--primary-hover);
+    background: var(--primary-dark);
     color: #fff;
     text-decoration: none;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    transform: translateY(-1px);
 }
 
 .navbar-right {

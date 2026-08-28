@@ -1268,6 +1268,7 @@ const Netdisk = {
             ownerId: f.ownerId,
             ownerName: userMap[f.ownerId] || '未知用户',
             shared: f.shared,
+            isGlobal: f.isGlobal === true,
             status: f.status || 'normal',   // normal / taken_down
             uploadedAt: f.uploadedAt
         }));

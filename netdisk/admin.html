@@ -106,6 +106,66 @@
             padding: 40px;
             color: var(--text-light);
         }
+        .file-search-box {
+            margin-bottom: 16px;
+        }
+        .file-search-box input {
+            width: 100%;
+            max-width: 340px;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--card-bg);
+            color: var(--text);
+        }
+        .file-search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        .user-file-group {
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--card-bg);
+            overflow: hidden;
+        }
+        .user-group-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            background: var(--bg);
+            font-weight: 600;
+        }
+        .user-group-header:hover {
+            background: var(--primary-light);
+        }
+        .user-group-name {
+            flex: 0 0 auto;
+        }
+        .user-group-count {
+            flex: 1;
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 13px;
+        }
+        .user-group-count.empty {
+            color: #9CA3AF;
+        }
+        .user-group-toggle {
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        .user-group-body {
+            border-top: 1px solid var(--border);
+        }
+        .user-group-body .admin-table {
+            border-radius: 0;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -146,6 +206,9 @@
 
         <!-- 文件管理 -->
         <div id="panel-files" style="display: none;">
+            <div class="file-search-box">
+                <input type="text" id="file-search-input" placeholder="搜索用户名..." oninput="Admin.searchFiles(this.value)">
+            </div>
             <div id="files-container">
                 <div class="empty-admin">加载中...</div>
             </div>
@@ -178,11 +241,12 @@
 
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
-    <script src="js/netdisk.js?v=12"></script>
+    <script src="js/netdisk.js?v=14"></script>
     <script src="js/ui.js?v=18"></script>
     <script>
         const Admin = {
             currentUser: null,
+            fileGroups: [],
 
             async init() {
                 if (!(await CONFIG.isConfigured())) {
@@ -355,54 +419,84 @@
 
             async loadFiles() {
                 try {
-                    const files = await Netdisk.adminListFiles();
-                    const container = document.getElementById('files-container');
-
-                    if (!files || files.length === 0) {
-                        container.innerHTML = '<div class="empty-admin">暂无文件</div>';
-                        return;
-                    }
-
-                    const statusMap = {
-                        'normal': '<span class="status-badge status-normal">正常</span>',
-                        'taken_down': '<span class="status-badge status-taken_down">已下架</span>'
-                    };
-
-                    container.innerHTML = `
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>文件名</th>
-                                    <th>所有者</th>
-                                    <th>大小</th>
-                                    <th>状态</th>
-                                    <th>上传时间</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${files.map(f => `
-                                    <tr>
-                                        <td>${UI.escapeHtml(f.name)}${f.isGlobal ? ' <span class="status-badge status-active" style="margin-left:4px;">公共</span>' : ''}</td>
-                                        <td>${UI.escapeHtml(f.ownerName)}</td>
-                                        <td>${UI.formatFileSize(f.size)}</td>
-                                        <td>${statusMap[f.status] || statusMap.normal}</td>
-                                        <td>${UI.formatDate(f.uploadedAt)}</td>
-                                        <td>
-                                            <div class="admin-actions">
-                                                <button class="btn btn-secondary btn-sm" onclick="Admin.downloadFile('${f.id}')">下载</button>
-                                                ${f.status !== 'taken_down' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.takeDownFile('${f.id}')">下架</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.restoreFile('${f.id}')">恢复</button>`}
-                                                <button class="btn btn-danger btn-sm" onclick="Admin.deleteFile('${f.id}')">删除</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
+                    const groups = await Netdisk.adminListFilesGroupedByUser();
+                    this.fileGroups = groups || [];
+                    this.renderFileGroups(this.fileGroups, '');
                 } catch (error) {
                     document.getElementById('files-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
                 }
+            },
+
+            searchFiles(keyword) {
+                if (this.fileGroups) {
+                    this.renderFileGroups(this.fileGroups, keyword || '');
+                }
+            },
+
+            renderFileGroups(groups, keyword) {
+                const container = document.getElementById('files-container');
+                const kw = (keyword || '').trim().toLowerCase();
+                let list = groups || [];
+                if (kw) {
+                    list = list.filter(g => g.username.toLowerCase().includes(kw));
+                }
+
+                if (!list.length) {
+                    container.innerHTML = '<div class="empty-admin">没有匹配的用户</div>';
+                    return;
+                }
+
+                const statusMap = {
+                    'normal': '<span class="status-badge status-normal">正常</span>',
+                    'taken_down': '<span class="status-badge status-taken_down">已下架</span>'
+                };
+
+                container.innerHTML = list.map(g => {
+                    const countText = g.fileCount === 0 ? '无文件' : `${g.fileCount} 个文件`;
+                    const fileRows = g.files.map(f => `
+                        <tr>
+                            <td>${UI.escapeHtml(f.name)}${f.isGlobal ? ' <span class="status-badge status-active" style="margin-left:4px;">公共</span>' : ''}</td>
+                            <td>${UI.formatFileSize(f.size)}</td>
+                            <td>${statusMap[f.status] || statusMap.normal}</td>
+                            <td>${UI.formatDate(f.uploadedAt)}</td>
+                            <td>
+                                <div class="admin-actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="Admin.downloadFile('${f.id}')">下载</button>
+                                    ${f.status !== 'taken_down' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.takeDownFile('${f.id}')">下架</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.restoreFile('${f.id}')">恢复</button>`}
+                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteFile('${f.id}')">删除</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                    const fileTable = g.files.length > 0 ? `
+                        <div class="user-group-body" id="group-body-${g.userId}" style="display:none;">
+                            <table class="admin-table">
+                                <thead><tr><th>文件名</th><th>大小</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead>
+                                <tbody>${fileRows}</tbody>
+                            </table>
+                        </div>` : '';
+                    const toggleEl = g.files.length > 0 ? `<span class="user-group-toggle" id="group-toggle-${g.userId}">▾ 展开</span>` : '';
+
+                    return `
+                        <div class="user-file-group">
+                            <div class="user-group-header" onclick="Admin.toggleGroup('${g.userId}')">
+                                <span class="user-group-name">${UI.escapeHtml(g.username)}</span>
+                                <span class="user-group-count ${g.fileCount === 0 ? 'empty' : ''}">${countText}</span>
+                                ${toggleEl}
+                            </div>
+                            ${fileTable}
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            toggleGroup(userId) {
+                const body = document.getElementById('group-body-' + userId);
+                const toggle = document.getElementById('group-toggle-' + userId);
+                if (!body) return;
+                const isHidden = body.style.display === 'none';
+                body.style.display = isHidden ? 'block' : 'none';
+                if (toggle) toggle.textContent = isHidden ? '▴ 收起' : '▾ 展开';
             },
 
             // 加载解冻申请

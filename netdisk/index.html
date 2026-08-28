@@ -62,7 +62,12 @@
         <div class="modal">
             <h3>分享文件</h3>
             <div class="modal-body">
-                <div id="share-config">
+                <div id="share-type-select">
+                    <p class="text-muted" style="margin-bottom: 16px;">请选择分享方式：</p>
+                    <button class="btn btn-primary" id="share-public-btn" style="margin-bottom: 12px;">公共分享（所有人可见，无限制）</button>
+                    <button class="btn btn-secondary" id="share-private-btn">私人分享（生成链接，可设限制）</button>
+                </div>
+                <div id="share-config" style="display: none;">
                     <p class="text-muted" style="margin-bottom: 12px;">设置分享限制，生成分享链接。</p>
                     <div class="form-group">
                         <label>有效期（天）</label>
@@ -91,9 +96,9 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=8"></script>
+    <script src="js/config.js?v=9"></script>
     <script src="js/github.js?v=6"></script>
-    <script src="js/netdisk.js?v=13"></script>
+    <script src="js/netdisk.js?v=14"></script>
     <script src="js/ui.js?v=18"></script>
     <script>
         const App = {
@@ -173,15 +178,19 @@
                 document.getElementById('tab-shares').classList.toggle('active', isShares);
                 document.getElementById('tab-global').classList.toggle('active', isGlobal);
 
-                document.getElementById('upload-btn').style.display = isShares ? 'none' : '';
-                document.getElementById('upload-area').style.display = isShares ? 'none' : '';
+                // 仅「我的文件」视图显示上传入口，公共分享区和我的分享都隐藏
+                const showUpload = (!isGlobal && !isShares);
+                document.getElementById('upload-btn').style.display = showUpload ? '' : 'none';
+                document.getElementById('upload-area').style.display = showUpload ? '' : 'none';
 
                 if (isShares) {
                     document.getElementById('page-title').textContent = '我的分享';
+                } else if (isGlobal) {
+                    document.getElementById('page-title').textContent = '公共分享区';
                 } else {
-                    document.getElementById('page-title').textContent = isGlobal ? '公共分享区' : '我的文件';
-                    document.getElementById('upload-btn').textContent = isGlobal ? '上传到公共区' : '上传文件';
-                    document.getElementById('upload-hint').textContent = isGlobal ? '点击此处或拖拽文件到公共分享区上传（所有登录用户可见）' : '点击此处或拖拽文件到此处上传';
+                    document.getElementById('page-title').textContent = '我的文件';
+                    document.getElementById('upload-btn').textContent = '上传文件';
+                    document.getElementById('upload-hint').textContent = '点击此处或拖拽文件到此处上传';
                 }
                 this.loadFiles();
             },
@@ -240,11 +249,10 @@
 
             async uploadFile(file) {
                 try {
-                    const isGlobal = this.currentView === 'global';
                     UI.showLoading(`上传中: ${file.name}`);
-                    await Netdisk.uploadFile(file, isGlobal);
+                    await Netdisk.uploadFile(file);
                     UI.hideLoading();
-                    UI.showMessage(isGlobal ? '已上传到公共分享区' : '文件上传成功', 'success');
+                    UI.showMessage('文件上传成功', 'success');
                     await this.loadFiles();
                 } catch (error) {
                     UI.hideLoading();
@@ -291,13 +299,36 @@
             },
 
             async shareFile(fileId) {
-                // 打开分享配置弹窗
+                // 打开分享类型选择弹窗
                 this.currentShareFileId = fileId;
+                document.getElementById('share-type-select').style.display = 'block';
+                document.getElementById('share-config').style.display = 'none';
+                document.getElementById('share-result').style.display = 'none';
+                document.getElementById('share-modal').style.display = 'flex';
+            },
+
+            showPrivateShareConfig() {
+                document.getElementById('share-type-select').style.display = 'none';
                 document.getElementById('share-config').style.display = 'block';
                 document.getElementById('share-result').style.display = 'none';
                 document.getElementById('share-expire-days').value = '-1';
                 document.getElementById('share-max-downloads').value = '-1';
-                document.getElementById('share-modal').style.display = 'flex';
+            },
+
+            async createPublicShare() {
+                const fileId = this.currentShareFileId;
+                if (!fileId) return;
+
+                try {
+                    UI.showLoading('发布到公共分享区...');
+                    await Netdisk.createPublicShare(fileId);
+                    UI.hideLoading();
+                    document.getElementById('share-modal').style.display = 'none';
+                    UI.showMessage('已发布到公共分享区', 'success');
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
             },
 
             async generateShareLink() {
@@ -388,6 +419,14 @@
                 // 分享模态框
                 document.getElementById('close-share-btn').addEventListener('click', () => {
                     document.getElementById('share-modal').style.display = 'none';
+                });
+
+                document.getElementById('share-public-btn').addEventListener('click', () => {
+                    this.createPublicShare();
+                });
+
+                document.getElementById('share-private-btn').addEventListener('click', () => {
+                    this.showPrivateShareConfig();
                 });
 
                 document.getElementById('generate-share-btn').addEventListener('click', () => {

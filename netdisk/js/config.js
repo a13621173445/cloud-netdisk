@@ -40,6 +40,7 @@ const CONFIG = {
 
     // 文件存储目录（相对于仓库根目录）
     STORAGE_DIR: 'netdisk/storage',
+    PUBLIC_STORAGE_DIR: 'netdisk/public_storage',
 
     // ============ Token 管理 ============
     // Token 使用 AES-256 加密存储在 TOKEN_KEY/TOKEN_IV/TOKEN_CIPHER 中

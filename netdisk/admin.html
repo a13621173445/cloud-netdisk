@@ -257,7 +257,7 @@
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=15"></script>
-    <script src="js/ui.js?v=18"></script>
+    <script src="js/ui.js?v=19"></script>
     <script>
         const Admin = {
             currentUser: null,
@@ -794,8 +794,8 @@
                     UI.showLoading('准备下载...');
                     const result = await Netdisk.adminDownloadFile(fileId);
                     UI.hideLoading();
-                    // 在新标签页打开文件，交给浏览器处理
-                    window.open(result.url, '_blank');
+                    // 强制下载，不预览
+                    await UI.forceDownload(result.url, result.name);
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');

@@ -181,7 +181,6 @@ body {
 .navbar .container {
     display: flex;
     align-items: center;
-    justify-content: space-between;
 }
 
 .navbar-brand {
@@ -218,6 +217,7 @@ body {
     display: flex;
     align-items: center;
     gap: 16px;
+    margin-left: auto;
 }
 
 .user-info {

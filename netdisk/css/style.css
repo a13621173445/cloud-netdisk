@@ -34,9 +34,10 @@ body {
 
 /* ============ 布局 ============ */
 .container {
-    max-width: 960px;
+    width: 100%;
+    max-width: 94%;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 clamp(16px, 2vw, 40px);
 }
 
 .auth-wrapper {

@@ -53,9 +53,9 @@
       "salt": "f64db1da00785ed9475b0054128c7189",
       "role": "user",
       "status": "active",
-      "verified": false,
-      "verificationCode": "932195",
-      "verificationCodeExpiry": "2026-08-28T07:40:04.070Z",
+      "verified": true,
+      "verificationCode": null,
+      "verificationCodeExpiry": null,
       "resetToken": null,
       "resetTokenExpiry": null,
       "createdAt": "2026-08-28T07:30:04.070Z"

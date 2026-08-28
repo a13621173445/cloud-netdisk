@@ -215,7 +215,7 @@ const UI = {
                     <div class="file-info">
                         <div class="file-name" title="${this.escapeHtml(file.name)}">${this.escapeHtml(file.name)}</div>
                         <div class="file-meta">
-                            ${this.formatFileSize(file.size)} · ${this.escapeHtml(file.ownerName || '未知用户')} · ${this.formatDate(file.uploadedAt)}
+                            ${this.formatFileSize(file.size)} · ${this.escapeHtml(file.ownerName || '未知用户')} · 分享于 ${this.formatDate(file.shareCreatedAt || file.uploadedAt)} · 访问 ${file.shareViewCount || 0} 次 · 下载 ${file.shareDownloadCount || 0} 次
                             <span class="badge-shared">公共</span>
                         </div>
                     </div>
@@ -242,14 +242,18 @@ const UI = {
         }
 
         container.innerHTML = shares.map(s => {
+            const shareTime = this.formatDate(s.shareCreatedAt || s.uploadedAt);
+            const viewText = `访问 ${s.shareViewCount || 0} 次`;
+            const downloadText = s.shareMaxDownloads === -1
+                ? `下载 ${s.shareDownloadCount || 0} 次`
+                : `下载 ${s.shareDownloadCount || 0}/${s.shareMaxDownloads} 次`;
             const expireText = s.shareExpireDays === -1 ? '永久有效' : `${s.shareExpireDays} 天`;
-            const downloadText = s.shareMaxDownloads === -1 ? '下载不限次' : `已下载 ${s.shareDownloadCount}/${s.shareMaxDownloads} 次`;
             return `
                 <div class="file-card" data-id="${this.escapeHtml(s.id)}">
                     <div class="file-icon">${this.getFileIcon(s.type, s.name)}</div>
                     <div class="file-info">
                         <div class="file-name" title="${this.escapeHtml(s.name)}">${this.escapeHtml(s.name)}</div>
-                        <div class="file-meta">${this.formatFileSize(s.size)} · ${expireText} · ${downloadText}</div>
+                        <div class="file-meta">${this.formatFileSize(s.size)} · ${this.escapeHtml(s.ownerName || '未知用户')} · 分享于 ${shareTime} · ${viewText} · ${downloadText} · ${expireText}</div>
                         <div class="share-link-box">
                             <input type="text" value="${this.escapeHtml(s.shareUrl)}" readonly onclick="this.select()">
                             <button class="btn btn-primary btn-sm" onclick="App.copyShareInput(this)">复制</button>

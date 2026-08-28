@@ -19,7 +19,7 @@
 
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
-    <script src="js/netdisk.js?v=11"></script>
+    <script src="js/netdisk.js?v=13"></script>
     <script src="js/ui.js?v=8"></script>
     <script>
         (async () => {
@@ -46,20 +46,20 @@
             try {
                 const file = await Netdisk.getSharedFile(token);
 
-                // 分享限制信息
+                // 分享追踪信息
+                const shareTime = UI.formatDate(file.shareCreatedAt || file.uploadedAt);
                 const expireText = file.expireDays === -1 ? '无限制' : `${file.expireDays} 天`;
-                const downloadText = file.maxDownloads === -1 ? '无限制' : `${file.downloadCount}/${file.maxDownloads} 次`;
 
                 document.getElementById('share-content').innerHTML = `
                     <div class="share-file-icon">${UI.getFileIcon(file.type, file.name)}</div>
                     <div class="share-file-name">${UI.escapeHtml(file.name)}</div>
                     <div class="share-file-meta">
-                        ${UI.formatFileSize(file.size)} · 上传于 ${UI.formatDate(file.uploadedAt)}
+                        ${UI.formatFileSize(file.size)} · 分享于 ${shareTime}
                     </div>
                     <div class="share-file-meta" style="margin-top: 8px;">
-                        有效期：${expireText} · 下载次数：${downloadText}
+                        访问 ${file.viewCount || 0} 次 · 下载 ${file.downloadCount || 0} 次 · 有效期 ${expireText}
                     </div>
-                    <a href="${UI.escapeHtml(file.url)}" class="btn btn-primary" style="margin-top: 24px;" download="${UI.escapeHtml(file.name)}">
+                    <a href="${UI.escapeHtml(file.url)}" class="btn btn-primary" style="margin-top: 24px;" download="${UI.escapeHtml(file.name)}" onclick="Netdisk.trackShareDownload('${token}')">
                         下载文件
                     </a>
                 `;

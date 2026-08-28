@@ -194,6 +194,40 @@ const UI = {
         `).join('');
     },
 
+    // ============ 全局分享文件列表渲染 ============
+
+    renderGlobalFileList(files, container, currentUserId) {
+        if (!files || files.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🌐</div>
+                    <p>公共分享区暂无文件，点击上方按钮上传</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = files.map(file => {
+            const isOwner = file.ownerId === currentUserId;
+            return `
+                <div class="file-card" data-id="${this.escapeHtml(file.id)}">
+                    <div class="file-icon">${this.getFileIcon(file.type, file.name)}</div>
+                    <div class="file-info">
+                        <div class="file-name" title="${this.escapeHtml(file.name)}">${this.escapeHtml(file.name)}</div>
+                        <div class="file-meta">
+                            ${this.formatFileSize(file.size)} · ${this.escapeHtml(file.ownerName || '未知用户')} · ${this.formatDate(file.uploadedAt)}
+                            <span class="badge-shared">公共</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn-icon" onclick="App.downloadFile('${this.escapeHtml(file.id)}')" title="下载">⬇</button>
+                        ${isOwner ? `<button class="btn-icon btn-danger" onclick="App.deleteFile('${this.escapeHtml(file.id)}')" title="删除"><span class="btn-icon-x">✕</span></button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
     // ============ 复制到剪贴板 ============
 
     async copyToClipboard(text) {

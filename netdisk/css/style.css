@@ -254,6 +254,37 @@ body {
     font-size: 24px;
 }
 
+/* ============ 视图切换标签 ============ */
+.view-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+}
+
+.view-tab {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-light);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+}
+
+.view-tab.active {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.view-tab:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
 .upload-area {
     border: 2px dashed var(--border);
     border-radius: var(--radius);

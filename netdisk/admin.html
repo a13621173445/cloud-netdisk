@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - GitHub Netdisk</title>
+    <link rel="stylesheet" href="css/style.css?v=20">
+    <style>
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 12px;
+        }
+        .admin-tab {
+            padding: 10px 24px;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-light);
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+        .admin-tab.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .admin-tab:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            min-width: 640px;
+        }
+        #users-container,
+        #files-container,
+        #unfreeze-container,
+        #public-container {
+            overflow-x: auto;
+        }
+        .admin-table th, .admin-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .admin-table th {
+            background: var(--bg);
+            font-weight: 600;
+            color: var(--text);
+        }
+        .admin-table tr:hover {
+            background: var(--bg);
+        }
+        .status-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-active { background: #D1FAE5; color: #065F46; }
+        .status-disabled { background: #FEE2E2; color: #991B1B; }
+        .status-frozen { background: #DBEAFE; color: #1E40AF; }
+        .status-deleted { background: #F3F4F6; color: #6B7280; }
+        .status-normal { background: #D1FAE5; color: #065F46; }
+        .status-taken_down { background: #FEF3C7; color: #92400E; }
+        .role-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .role-admin { background: #FEF3C7; color: #92400E; }
+        .role-superadmin { background: #FEE2E2; color: #991B1B; }
+        .role-user { background: #E5E7EB; color: #374151; }
+        .admin-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .admin-actions .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .admin-header h2 {
+            font-size: 24px;
+        }
+        .back-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .empty-admin {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+        .file-search-box {
+            margin-bottom: 16px;
+        }
+        .file-search-box input {
+            width: 100%;
+            max-width: 340px;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--card-bg);
+            color: var(--text);
+        }
+        .file-search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        .user-file-group {
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--card-bg);
+            overflow: hidden;
+        }
+        .user-group-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            background: var(--bg);
+            font-weight: 600;
+        }
+        .user-group-header:hover {
+            background: var(--primary-light);
+        }
+        .user-group-name {
+            flex: 0 0 auto;
+        }
+        .user-group-count {
+            flex: 1;
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 13px;
+        }
+        .user-group-count.empty {
+            color: #9CA3AF;
+        }
+        .user-group-toggle {
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        .user-group-body {
+            border-top: 1px solid var(--border);
+        }
+        .user-group-body .admin-table {
+            border-radius: 0;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <div class="navbar-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">A</div>
+                    <span id="user-name">管理员</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container dashboard">
+        <div class="admin-header">
+            <h2>管理后台</h2>
+            <a href="index.html" class="back-link">← 返回网盘</a>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="admin-tabs">
+            <button class="admin-tab active" id="tab-users" onclick="Admin.switchTab('users')">用户管理</button>
+            <button class="admin-tab" id="tab-files" onclick="Admin.switchTab('files')">文件管理</button>
+            <button class="admin-tab" id="tab-public" onclick="Admin.switchTab('public')">公共管理</button>
+            <button class="admin-tab" id="tab-unfreeze" onclick="Admin.switchTab('unfreeze')">解冻申请</button>
+        </div>
+
+        <!-- 用户管理 -->
+        <div id="panel-users">
+            <div id="users-container">
+                <div class="empty-admin">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 文件管理 -->
+        <div id="panel-files" style="display: none;">
+            <div class="file-search-box">
+                <input type="text" id="file-search-input" placeholder="搜索用户名..." oninput="Admin.searchFiles(this.value)">
+            </div>
+            <div id="files-container">
+                <div class="empty-admin">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 公共管理 -->
+        <div id="panel-public" style="display: none;">
+            <div id="public-container">
+                <div class="empty-admin">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 解冻申请 -->
+        <div id="panel-unfreeze" style="display: none;">
+            <div id="unfreeze-container">
+                <div class="empty-admin">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 原因输入弹窗 -->
+    <div class="modal-overlay" id="reason-modal" style="display: none;">
+        <div class="modal">
+            <h3 id="reason-title">输入原因</h3>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label id="reason-label">原因（可为空）</label>
+                    <input type="text" id="reason-input" placeholder="输入原因..." style="width:100%;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="reason-cancel-btn">取消</button>
+                <button class="btn btn-primary" id="reason-confirm-btn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
+    <script src="js/netdisk.js?v=16"></script>
+    <script src="js/ui.js?v=20"></script>
+    <script>
+        const Admin = {
+            currentUser: null,
+            fileGroups: [],
+            currentTab: 'users',
+
+            async init() {
+                if (!(await CONFIG.isConfigured())) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 检查登录状态：本地缓存不存在则重置为未登录并回到登录页
+                this.currentUser = Netdisk.getCurrentUserLocal();
+                if (!this.currentUser) {
+                    Netdisk.logout();
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 从服务端验证会话：账号被删除/冻结/会话失效时返回 null，强制登出
+                // 网络异常时抛异常，使用本地缓存（离线容忍）
+                try {
+                    const serverUser = await Netdisk.getCurrentUser();
+                    if (serverUser) {
+                        this.currentUser = serverUser;
+                    } else {
+                        Netdisk.logout();
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                } catch (e) {
+                    // 网络异常时使用本地缓存，不跳转
+                }
+
+                // 检查管理员权限
+                if (!Netdisk.isAdmin()) {
+                    UI.showMessage('无管理员权限', 'error');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                    return;
+                }
+
+                document.getElementById('user-name').textContent = this.currentUser.username;
+                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await Netdisk.logout();
+                    window.location.href = 'login.html';
+                });
+
+                await this.loadUsers();
+            },
+
+            switchTab(tab) {
+                this.currentTab = tab;
+                document.getElementById('tab-users').classList.toggle('active', tab === 'users');
+                document.getElementById('tab-files').classList.toggle('active', tab === 'files');
+                document.getElementById('tab-public').classList.toggle('active', tab === 'public');
+                document.getElementById('tab-unfreeze').classList.toggle('active', tab === 'unfreeze');
+                document.getElementById('panel-users').style.display = tab === 'users' ? 'block' : 'none';
+                document.getElementById('panel-files').style.display = tab === 'files' ? 'block' : 'none';
+                document.getElementById('panel-public').style.display = tab === 'public' ? 'block' : 'none';
+                document.getElementById('panel-unfreeze').style.display = tab === 'unfreeze' ? 'block' : 'none';
+
+                if (tab === 'users') this.loadUsers();
+                if (tab === 'files') this.loadFiles();
+                if (tab === 'public') this.loadPublicFiles();
+                if (tab === 'unfreeze') this.loadUnfreezeRequests();
+            },
+
+            // 自定义输入弹窗，返回 Promise<string|null>
+            showPrompt(title, label, placeholder = '') {
+                return new Promise((resolve) => {
+                    document.getElementById('reason-title').textContent = title;
+                    document.getElementById('reason-label').textContent = label;
+                    document.getElementById('reason-input').value = '';
+                    document.getElementById('reason-input').placeholder = placeholder;
+                    document.getElementById('reason-modal').style.display = 'flex';
+                    document.getElementById('reason-input').focus();
+
+                    const confirmHandler = () => {
+                        document.getElementById('reason-modal').style.display = 'none';
+                        document.getElementById('reason-confirm-btn').removeEventListener('click', confirmHandler);
+                        document.getElementById('reason-cancel-btn').removeEventListener('click', cancelHandler);
+                        resolve(document.getElementById('reason-input').value);
+                    };
+                    const cancelHandler = () => {
+                        document.getElementById('reason-modal').style.display = 'none';
+                        document.getElementById('reason-confirm-btn').removeEventListener('click', confirmHandler);
+                        document.getElementById('reason-cancel-btn').removeEventListener('click', cancelHandler);
+                        resolve(null);
+                    };
+                    document.getElementById('reason-confirm-btn').addEventListener('click', confirmHandler);
+                    document.getElementById('reason-cancel-btn').addEventListener('click', cancelHandler);
+                    document.getElementById('reason-input').addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') confirmHandler();
+                        if (e.key === 'Escape') cancelHandler();
+                    });
+                });
+            },
+
+            // 判断当前用户是否有权限操作目标用户
+            // 权限规则：
+            // - 超级管理员：可操作普通用户和管理员，不能操作超级管理员
+            // - 管理员：只能操作普通用户，不能操作管理员和超级管理员
+            // - 超级管理员永不被操作
+            canOperateUser(targetUser) {
+                const currentRole = this.currentUser ? this.currentUser.role : 'user';
+                const targetRole = targetUser.role || 'user';
+
+                // 不能操作自己
+                if (this.currentUser && this.currentUser.id === targetUser.id) return false;
+                // 超级管理员永不被操作
+                if (targetRole === 'superadmin') return false;
+                // 超级管理员可以操作普通用户和管理员
+                if (currentRole === 'superadmin') return true;
+                // 管理员只能操作普通用户
+                if (currentRole === 'admin') return targetRole === 'user';
+                // 普通用户无操作权限
+                return false;
+            },
+
+            // 判断当前用户是否能设置目标用户的管理员角色（仅超级管理员）
+            canSetAdmin(targetUser) {
+                return this.currentUser && this.currentUser.role === 'superadmin' && (targetUser.role || 'user') !== 'superadmin';
+            },
+
+            // 设置/取消管理员角色
+            async setAdminRole(userId, makeAdmin) {
+                try {
+                    UI.showLoading('处理中...');
+                    const result = await Netdisk.setAdminRole(userId, makeAdmin);
+                    UI.hideLoading();
+                    UI.showMessage(result.message, 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async loadUsers() {
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const container = document.getElementById('users-container');
+
+                    if (!users || users.length === 0) {
+                        container.innerHTML = '<div class="empty-admin">暂无用户</div>';
+                        return;
+                    }
+
+                    const statusMap = {
+                        'active': '<span class="status-badge status-active">正常</span>',
+                        'disabled': '<span class="status-badge status-disabled">已禁用</span>',
+                        'frozen': '<span class="status-badge status-frozen">已冻结</span>',
+                        'deleted': '<span class="status-badge status-deleted">已注销</span>'
+                    };
+                    const roleMap = {
+                        'superadmin': '<span class="role-badge role-superadmin">超级管理员</span>',
+                        'admin': '<span class="role-badge role-admin">管理员</span>',
+                        'user': '<span class="role-badge role-user">用户</span>'
+                    };
+
+                    container.innerHTML = `
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>用户名</th>
+                                    <th>邮箱</th>
+                                    <th>角色</th>
+                                    <th>状态</th>
+                                    <th>注册时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${users.map(u => `
+                                    <tr>
+                                        <td>${UI.escapeHtml(u.username)}</td>
+                                        <td>${UI.escapeHtml(u.email)}</td>
+                                        <td>${roleMap[u.role] || roleMap.user}</td>
+                                        <td>${statusMap[u.status] || statusMap.active}</td>
+                                        <td>${UI.formatDateTime(u.createdAt)}</td>
+                                        <td>
+                                            <div class="admin-actions">
+                                                ${this.canSetAdmin(u) ? (u.role === 'admin' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', false)">取消管理员</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', true)">设为管理员</button>`) : ''}
+                                                ${this.canOperateUser(u) ? `
+                                                    ${u.status !== 'disabled' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.disableUser('${u.id}')">禁用</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解禁</button>`}
+                                                    ${u.status !== 'frozen' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.freezeUser('${u.id}')">冻结</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解冻</button>`}
+                                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${u.id}')">注销</button>
+                                                ` : '<span style="color:#999;font-size:12px">—</span>'}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } catch (error) {
+                    document.getElementById('users-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
+                }
+            },
+
+            async loadFiles() {
+                try {
+                    const groups = await Netdisk.adminListFilesGroupedByUser();
+                    this.fileGroups = groups || [];
+                    this.renderFileGroups(this.fileGroups, '');
+                } catch (error) {
+                    document.getElementById('files-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
+                }
+            },
+
+            searchFiles(keyword) {
+                if (this.fileGroups) {
+                    this.renderFileGroups(this.fileGroups, keyword || '');
+                }
+            },
+
+            renderFileGroups(groups, keyword) {
+                const container = document.getElementById('files-container');
+                const kw = (keyword || '').trim().toLowerCase();
+                let list = groups || [];
+                if (kw) {
+                    list = list.filter(g => g.username.toLowerCase().includes(kw));
+                }
+
+                if (!list.length) {
+                    container.innerHTML = '<div class="empty-admin">没有匹配的用户</div>';
+                    return;
+                }
+
+                const statusMap = {
+                    'normal': '<span class="status-badge status-normal">正常</span>',
+                    'taken_down': '<span class="status-badge status-taken_down">已下架</span>'
+                };
+
+                container.innerHTML = list.map(g => {
+                    const countText = g.fileCount === 0 ? '无文件' : `${g.fileCount} 个文件`;
+                    const fileRows = g.files.map(f => `
+                        <tr>
+                            <td>${UI.escapeHtml(f.name)}${f.isGlobal ? ' <span class="status-badge status-active" style="margin-left:4px;">公共</span>' : ''}</td>
+                            <td>${UI.formatFileSize(f.size)}</td>
+                            <td>${statusMap[f.status] || statusMap.normal}</td>
+                            <td>${UI.formatDate(f.uploadedAt)}</td>
+                            <td>
+                                <div class="admin-actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="Admin.downloadFile('${f.id}')">下载</button>
+                                    ${f.status !== 'taken_down' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.takeDownFile('${f.id}')">下架</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.restoreFile('${f.id}')">恢复</button>`}
+                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteFile('${f.id}')">删除</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                    const fileTable = g.files.length > 0 ? `
+                        <div class="user-group-body" id="group-body-${g.userId}" style="display:none;">
+                            <table class="admin-table">
+                                <thead><tr><th>文件名</th><th>大小</th><th>状态</th><th>上传时间</th><th>操作</th></tr></thead>
+                                <tbody>${fileRows}</tbody>
+                            </table>
+                        </div>` : '';
+                    const toggleEl = g.files.length > 0 ? `<span class="user-group-toggle" id="group-toggle-${g.userId}">▾ 展开</span>` : '';
+
+                    return `
+                        <div class="user-file-group">
+                            <div class="user-group-header" onclick="Admin.toggleGroup('${g.userId}')">
+                                <span class="user-group-name">${UI.escapeHtml(g.username)}</span>
+                                <span class="user-group-count ${g.fileCount === 0 ? 'empty' : ''}">${countText}</span>
+                                ${toggleEl}
+                            </div>
+                            ${fileTable}
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            toggleGroup(userId) {
+                const body = document.getElementById('group-body-' + userId);
+                const toggle = document.getElementById('group-toggle-' + userId);
+                if (!body) return;
+                const isHidden = body.style.display === 'none';
+                body.style.display = isHidden ? 'block' : 'none';
+                if (toggle) toggle.textContent = isHidden ? '▴ 收起' : '▾ 展开';
+            },
+
+            async loadPublicFiles() {
+                try {
+                    const files = await Netdisk.adminListPublicFiles();
+                    this.renderPublicFiles(files || []);
+                } catch (error) {
+                    document.getElementById('public-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
+                }
+            },
+
+            renderPublicFiles(files) {
+                const container = document.getElementById('public-container');
+                if (!files.length) {
+                    container.innerHTML = '<div class="empty-admin">暂无公共文件</div>';
+                    return;
+                }
+                const statusMap = {
+                    'normal': '<span class="status-badge status-normal">正常</span>',
+                    'taken_down': '<span class="status-badge status-taken_down">已下架</span>'
+                };
+                container.innerHTML = `
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>文件名</th>
+                                <th>上传者</th>
+                                <th>大小</th>
+                                <th>访问</th>
+                                <th>下载</th>
+                                <th>状态</th>
+                                <th>分享时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${files.map(f => `
+                                <tr>
+                                    <td>${UI.escapeHtml(f.name)}</td>
+                                    <td>${UI.escapeHtml(f.ownerName)}</td>
+                                    <td>${UI.formatFileSize(f.size)}</td>
+                                    <td>${f.shareViewCount || 0} 次</td>
+                                    <td>${f.shareDownloadCount || 0} 次</td>
+                                    <td>${statusMap[f.status] || statusMap.normal}</td>
+                                    <td>${UI.formatDate(f.shareCreatedAt || f.uploadedAt)}</td>
+                                    <td>
+                                        <div class="admin-actions">
+                                            <button class="btn btn-secondary btn-sm" onclick="Admin.downloadFile('${f.id}')">下载</button>
+                                            ${f.status !== 'taken_down' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.takeDownFile('${f.id}')">下架</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.restoreFile('${f.id}')">恢复</button>`}
+                                            <button class="btn btn-danger btn-sm" onclick="Admin.deleteFile('${f.id}')">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            },
+
+            refreshCurrentTab() {
+                if (this.currentTab === 'public') return this.loadPublicFiles();
+                if (this.currentTab === 'unfreeze') return this.loadUnfreezeRequests();
+                if (this.currentTab === 'files') return this.loadFiles();
+                return this.loadUsers();
+            },
+
+            // 加载解冻申请
+            async loadUnfreezeRequests() {
+                try {
+                    const requests = await Netdisk.adminListUnfreezeRequests();
+                    const container = document.getElementById('unfreeze-container');
+
+                    if (!requests || requests.length === 0) {
+                        container.innerHTML = '<div class="empty-admin">暂无解冻申请</div>';
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>用户名</th>
+                                    <th>邮箱</th>
+                                    <th>角色</th>
+                                    <th>当前状态</th>
+                                    <th>冻结原因</th>
+                                    <th>申请原因</th>
+                                    <th>申请时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${requests.map(r => `
+                                    <tr>
+                                        <td>${UI.escapeHtml(r.username)}</td>
+                                        <td>${UI.escapeHtml(r.email)}</td>
+                                        <td>${r.role === 'superadmin' ? '超级管理员' : (r.role === 'admin' ? '管理员' : '用户')}</td>
+                                        <td>${r.status === 'frozen' ? '已冻结' : (r.status === 'disabled' ? '已禁用' : '正常')}</td>
+                                        <td>${UI.escapeHtml(r.statusReason || '无')}</td>
+                                        <td style="max-width:200px;word-break:break-all;">${UI.escapeHtml(r.unfreezeReason || '无')}</td>
+                                        <td>${UI.formatDate(r.unfreezeRequestedAt)}</td>
+                                        <td>
+                                            <div class="admin-actions">
+                                                <button class="btn btn-secondary btn-sm" onclick="Admin.approveUnfreeze('${r.id}')">批准解冻</button>
+                                                <button class="btn btn-danger btn-sm" onclick="Admin.rejectUnfreeze('${r.id}')">拒绝</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } catch (error) {
+                    document.getElementById('unfreeze-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
+                }
+            },
+
+            // 批准解冻
+            async approveUnfreeze(userId) {
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminHandleUnfreezeRequest(userId, true);
+                    UI.hideLoading();
+                    UI.showMessage('已批准解冻', 'success');
+                    await this.loadUnfreezeRequests();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            // 拒绝解冻
+            async rejectUnfreeze(userId) {
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminHandleUnfreezeRequest(userId, false);
+                    UI.hideLoading();
+                    UI.showMessage('已拒绝解冻申请', 'success');
+                    await this.loadUnfreezeRequests();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async disableUser(userId) {
+                const confirmed = await UI.confirm('确定要禁用该用户吗？禁用后该用户无法进行文件操作，但可以登录查看解禁信息。', '禁用用户', '禁用', '取消');
+                if (!confirmed) return;
+                const reason = await this.showPrompt('禁用用户', '禁用原因（可为空）', '输入原因...');
+                if (reason === null) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminDisableUser(userId, reason || '');
+                    UI.hideLoading();
+                    UI.showMessage('用户已禁用', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async freezeUser(userId) {
+                const confirmed = await UI.confirm('确定要冻结该用户吗？冻结后该用户将无法登录，且无法进行任何操作。', '冻结用户', '冻结', '取消');
+                if (!confirmed) return;
+                const reason = await this.showPrompt('冻结用户', '冻结原因（可为空）', '输入原因...');
+                if (reason === null) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminFreezeUser(userId, reason || '');
+                    UI.hideLoading();
+                    UI.showMessage('用户已冻结', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async activateUser(userId) {
+                const confirmed = await UI.confirm('确定要恢复该用户的正常状态吗？', '恢复用户', '确定', '取消');
+                if (!confirmed) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminActivateUser(userId);
+                    UI.hideLoading();
+                    UI.showMessage('用户已恢复为正常状态', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async deleteUser(userId) {
+                const confirmed = await UI.confirm('确定要注销该用户吗？将删除该用户账户及其所有文件，此操作不可恢复！', '注销用户', '注销', '取消');
+                if (!confirmed) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminDeleteUser(userId);
+                    UI.hideLoading();
+                    UI.showMessage('用户已注销', 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async takeDownFile(fileId) {
+                const confirmed = await UI.confirm('确定要下架该文件吗？下架后分享链接将失效。', '下架文件', '下架', '取消');
+                if (!confirmed) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminTakeDownFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已下架', 'success');
+                    await this.refreshCurrentTab();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async restoreFile(fileId) {
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminRestoreFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已恢复', 'success');
+                    await this.refreshCurrentTab();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async deleteFile(fileId) {
+                const confirmed = await UI.confirm('确定要删除该文件吗？此操作不可恢复！', '删除文件', '删除', '取消');
+                if (!confirmed) return;
+                try {
+                    UI.showLoading('处理中...');
+                    await Netdisk.adminDeleteFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已删除', 'success');
+                    await this.refreshCurrentTab();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async downloadFile(fileId) {
+                try {
+                    UI.showLoading('准备下载...');
+                    const result = await Netdisk.adminDownloadFile(fileId);
+                    UI.hideLoading();
+                    // 强制下载，不预览
+                    await UI.forceDownload(result.url, result.name);
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            }
+        };
+
+        Admin.init();
+    </script>
+</body>
+</html>

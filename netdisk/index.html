@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Netdisk</title>
+    <link rel="stylesheet" href="css/style.css?v=22">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <a href="sponsor.html" class="navbar-sponsor" target="_blank" title="赞助支持">赞助</a>
+            <div class="navbar-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <span id="user-name">用户</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="account-btn">账户设置</button>
+                <button class="btn btn-secondary btn-sm" id="admin-btn" style="display: none;">管理后台</button>
+                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container dashboard">
+        <div class="dashboard-header">
+            <h2 id="page-title">我的文件</h2>
+            <button class="btn btn-primary btn-sm" id="upload-btn">上传文件</button>
+        </div>
+
+        <!-- 视图切换 -->
+        <div class="view-tabs">
+            <button class="view-tab active" id="tab-mine" onclick="App.switchView('mine')">我的文件</button>
+            <button class="view-tab" id="tab-shares" onclick="App.switchView('shares')">我的分享</button>
+            <button class="view-tab" id="tab-global" onclick="App.switchView('global')">公共分享区</button>
+        </div>
+
+        <!-- 上传区域 -->
+        <div class="upload-area" id="upload-area">
+            <div class="upload-icon">📤</div>
+            <p id="upload-hint">点击此处或拖拽文件到此处上传</p>
+            <div class="upload-limit">最大支持 50MB</div>
+        </div>
+
+        <!-- 文件列表 -->
+        <div class="file-list" id="file-list">
+            <div class="empty-state">
+                <div class="empty-icon">📁</div>
+                <p>加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件选择 -->
+    <input type="file" id="file-input" style="display: none;">
+
+    <!-- 分享模态框 -->
+    <div class="modal-overlay" id="share-modal" style="display: none;">
+        <div class="modal">
+            <h3>分享文件</h3>
+            <div class="modal-body">
+                <div id="share-type-select">
+                    <p class="text-muted" style="margin-bottom: 16px;">请选择分享方式：</p>
+                    <button class="btn btn-primary" id="share-public-btn" style="margin-bottom: 12px;">公共分享（所有人可见，无限制）</button>
+                    <button class="btn btn-secondary" id="share-private-btn">私人分享（生成链接，可设限制）</button>
+                </div>
+                <div id="share-config" style="display: none;">
+                    <p class="text-muted" style="margin-bottom: 12px;">设置分享限制，生成分享链接。</p>
+                    <div class="form-group">
+                        <label>有效期（天）</label>
+                        <input type="number" id="share-expire-days" value="-1" min="-1" placeholder="-1 表示无限制">
+                        <div class="hint">-1 表示无限制，其他值表示有效天数</div>
+                    </div>
+                    <div class="form-group">
+                        <label>下载次数限制</label>
+                        <input type="number" id="share-max-downloads" value="-1" min="-1" placeholder="-1 表示无限制">
+                        <div class="hint">-1 表示无限制，其他值表示最大下载次数</div>
+                    </div>
+                    <button class="btn btn-primary" id="generate-share-btn">生成分享链接</button>
+                </div>
+                <div id="share-result" style="display: none;">
+                    <p class="text-muted" style="margin-bottom: 12px;">复制以下链接分享给他人。</p>
+                    <div class="share-link-box">
+                        <input type="text" id="share-url" readonly>
+                        <button class="btn btn-primary btn-sm" id="copy-share-btn">复制</button>
+                    </div>
+                    <div id="share-limit-info" class="text-muted" style="margin-top: 8px; font-size: 13px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="close-share-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
+    <script src="js/netdisk.js?v=16"></script>
+    <script src="js/ui.js?v=19"></script>
+    <script>
+        const App = {
+            currentUser: null,
+            fileInput: null,
+            currentView: 'mine',
+
+            async init() {
+                // 检查 EULA 协议
+                if (!localStorage.getItem('netdisk_eula_agreed')) {
+                    window.location.href = 'eula.html';
+                    return;
+                }
+
+                // 检查配置
+                if (!(await CONFIG.isConfigured())) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 检查登录状态：本地缓存不存在则重置为未登录并回到登录页
+                this.currentUser = Netdisk.getCurrentUserLocal();
+                if (!this.currentUser) {
+                    Netdisk.logout();
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 从服务端验证会话：账号被删除/冻结/会话失效时返回 null，强制登出
+                // 网络异常时抛异常，使用本地缓存（离线容忍）
+                try {
+                    const serverUser = await Netdisk.getCurrentUser();
+                    if (serverUser) {
+                        this.currentUser = serverUser;
+                    } else {
+                        Netdisk.logout();
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                } catch (e) {
+                    // 网络异常时使用本地缓存，不跳转
+                }
+
+                // 显示用户信息
+                document.getElementById('user-name').textContent = this.currentUser.username;
+                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                // 管理员显示管理后台入口
+                if (this.currentUser.role === 'admin' || this.currentUser.role === 'superadmin') {
+                    document.getElementById('admin-btn').style.display = 'inline-flex';
+                }
+
+                // 检查账户状态：禁用用户只能查看解禁信息
+                if (this.currentUser.status === 'disabled') {
+                    this.showDisabledBanner();
+                    return;
+                }
+
+                // 初始化上传
+                this.initUpload();
+
+                // 加载文件列表
+                await this.loadFiles();
+
+                // 绑定事件
+                this.bindEvents();
+            },
+
+            switchView(view) {
+                this.currentView = view;
+                const isGlobal = view === 'global';
+                const isShares = view === 'shares';
+                document.getElementById('tab-mine').classList.toggle('active', !isGlobal && !isShares);
+                document.getElementById('tab-shares').classList.toggle('active', isShares);
+                document.getElementById('tab-global').classList.toggle('active', isGlobal);
+
+                // 仅「我的文件」视图显示上传入口，公共分享区和我的分享都隐藏
+                const showUpload = (!isGlobal && !isShares);
+                document.getElementById('upload-btn').style.display = showUpload ? '' : 'none';
+                document.getElementById('upload-area').style.display = showUpload ? '' : 'none';
+
+                if (isShares) {
+                    document.getElementById('page-title').textContent = '我的分享';
+                } else if (isGlobal) {
+                    document.getElementById('page-title').textContent = '公共分享区';
+                } else {
+                    document.getElementById('page-title').textContent = '我的文件';
+                    document.getElementById('upload-btn').textContent = '上传文件';
+                    document.getElementById('upload-hint').textContent = '点击此处或拖拽文件到此处上传';
+                }
+                this.loadFiles();
+            },
+
+            showDisabledBanner() {
+                document.querySelector('.dashboard-header').style.display = 'none';
+                document.getElementById('upload-area').style.display = 'none';
+                document.getElementById('file-list').innerHTML = `
+                    <div class="account-card" style="text-align:center;padding:40px;">
+                        <h3 style="color:#991B1B;margin-bottom:16px;">账户已被禁用</h3>
+                        <p style="margin:8px 0;color:var(--text-light);">你的账户已被禁用，无法进行文件相关操作。</p>
+                        <p style="margin:8px 0;color:var(--text-light);">如需解禁，请前往账户设置提交解禁申请。</p>
+                        <div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">
+                            <a href="account.html" class="btn btn-primary">前往账户设置</a>
+                            <button class="btn btn-secondary" onclick="Netdisk.logout().then(() => window.location.href='login.html')">退出登录</button>
+                        </div>
+                    </div>
+                `;
+            },
+
+            initUpload() {
+                this.fileInput = document.getElementById('file-input');
+                const uploadArea = document.getElementById('upload-area');
+
+                // 点击上传
+                uploadArea.addEventListener('click', () => {
+                    this.fileInput.click();
+                });
+
+                // 文件选择
+                this.fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.uploadFile(e.target.files[0]);
+                        e.target.value = '';
+                    }
+                });
+
+                // 拖拽上传
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        this.uploadFile(e.dataTransfer.files[0]);
+                    }
+                });
+            },
+
+            async uploadFile(file) {
+                try {
+                    UI.showLoading(`上传中: ${file.name}`);
+                    await Netdisk.uploadFile(file);
+                    UI.hideLoading();
+                    UI.showMessage('文件上传成功', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async loadFiles() {
+                try {
+                    const fileListEl = document.getElementById('file-list');
+                    if (this.currentView === 'global') {
+                        const files = await Netdisk.listGlobalFiles();
+                        UI.renderGlobalFileList(files, fileListEl, this.currentUser ? this.currentUser.id : null);
+                    } else if (this.currentView === 'shares') {
+                        const shares = await Netdisk.listMyShares();
+                        UI.renderShareList(shares, fileListEl);
+                    } else {
+                        const files = await Netdisk.listFiles();
+                        UI.renderFileList(files, fileListEl);
+                    }
+                } catch (error) {
+                    UI.showMessage('加载文件列表失败: ' + error.message, 'error');
+                }
+            },
+
+            async downloadFile(fileId) {
+                try {
+                    UI.showLoading('准备下载...');
+                    const result = await Netdisk.downloadFile(fileId);
+                    UI.hideLoading();
+
+                    // 强制下载，不预览
+                    await UI.forceDownload(result.url, result.name);
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async shareFile(fileId) {
+                // 打开分享类型选择弹窗
+                this.currentShareFileId = fileId;
+                document.getElementById('share-type-select').style.display = 'block';
+                document.getElementById('share-config').style.display = 'none';
+                document.getElementById('share-result').style.display = 'none';
+                document.getElementById('share-modal').style.display = 'flex';
+            },
+
+            showPrivateShareConfig() {
+                document.getElementById('share-type-select').style.display = 'none';
+                document.getElementById('share-config').style.display = 'block';
+                document.getElementById('share-result').style.display = 'none';
+                document.getElementById('share-expire-days').value = '-1';
+                document.getElementById('share-max-downloads').value = '-1';
+            },
+
+            async createPublicShare() {
+                const fileId = this.currentShareFileId;
+                if (!fileId) return;
+
+                try {
+                    UI.showLoading('发布到公共分享区...');
+                    await Netdisk.createPublicShare(fileId);
+                    UI.hideLoading();
+                    document.getElementById('share-modal').style.display = 'none';
+                    UI.showMessage('已发布到公共分享区', 'success');
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async generateShareLink() {
+                const fileId = this.currentShareFileId;
+                if (!fileId) return;
+
+                const expireDays = parseInt(document.getElementById('share-expire-days').value);
+                const maxDownloads = parseInt(document.getElementById('share-max-downloads').value);
+
+                try {
+                    UI.showLoading('生成分享链接...');
+                    const result = await Netdisk.createShareLink(fileId, expireDays, maxDownloads);
+                    UI.hideLoading();
+
+                    document.getElementById('share-url').value = result.shareUrl;
+                    document.getElementById('share-config').style.display = 'none';
+                    document.getElementById('share-result').style.display = 'block';
+
+                    // 显示限制信息
+                    const expireText = result.expireDays === -1 ? '无限制' : `${result.expireDays} 天`;
+                    const downloadText = result.maxDownloads === -1 ? '无限制' : `${result.maxDownloads} 次`;
+                    document.getElementById('share-limit-info').textContent = `有效期：${expireText}，下载次数：${downloadText}`;
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            async deleteFile(fileId) {
+                const confirmed = await UI.confirm('确定要删除此文件吗？删除后不可恢复。', '删除文件', '删除', '取消');
+                if (!confirmed) return;
+
+                try {
+                    UI.showLoading('删除中...');
+                    await Netdisk.deleteFile(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('文件已删除', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            copyShareInput(btn) {
+                const input = btn.parentElement.querySelector('input');
+                if (input) UI.copyToClipboard(input.value);
+            },
+
+            async revokeShare(fileId) {
+                const confirmed = await UI.confirm('确定要取消该文件的分享吗？取消后分享链接将立即失效。', '取消分享', '确定', '取消');
+                if (!confirmed) return;
+
+                try {
+                    UI.showLoading('取消中...');
+                    await Netdisk.revokeShare(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('分享已取消', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            bindEvents() {
+                // 退出登录
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await Netdisk.logout();
+                    window.location.href = 'login.html';
+                });
+
+                // 管理后台
+                document.getElementById('admin-btn').addEventListener('click', () => {
+                    window.location.href = 'admin.html';
+                });
+
+                // 用户管理
+                document.getElementById('account-btn').addEventListener('click', () => {
+                    window.location.href = 'account.html';
+                });
+
+                // 上传按钮
+                document.getElementById('upload-btn').addEventListener('click', () => {
+                    this.fileInput.click();
+                });
+
+                // 分享模态框
+                document.getElementById('close-share-btn').addEventListener('click', () => {
+                    document.getElementById('share-modal').style.display = 'none';
+                });
+
+                document.getElementById('share-public-btn').addEventListener('click', () => {
+                    this.createPublicShare();
+                });
+
+                document.getElementById('share-private-btn').addEventListener('click', () => {
+                    this.showPrivateShareConfig();
+                });
+
+                document.getElementById('generate-share-btn').addEventListener('click', () => {
+                    this.generateShareLink();
+                });
+
+                document.getElementById('copy-share-btn').addEventListener('click', () => {
+                    const input = document.getElementById('share-url');
+                    UI.copyToClipboard(input.value);
+                });
+            }
+        };
+
+        App.init();
+    </script>
+</body>
+</html>

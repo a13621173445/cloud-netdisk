@@ -21,7 +21,7 @@
       "email": "z15163955055@outlook.com",
       "passwordHash": "cb1b4ee818bd0a254d4f5a60c95dd1bcb81c9dfc5522b393ddec4456e343f001",
       "salt": "8cc655ed33d53fda25004a92ff79f4b8",
-      "role": "user",
+      "role": "admin",
       "status": "active",
       "verified": true,
       "verificationCode": null,

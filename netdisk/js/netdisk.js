@@ -1416,7 +1416,7 @@ const Netdisk = {
         const files = (filesData && filesData.files) || [];
 
         const groups = users.map(u => {
-            const userFiles = files.filter(f => f.ownerId === u.id);
+            const userFiles = files.filter(f => f.ownerId === u.id && !f.isGlobal);
             return {
                 userId: u.id,
                 username: u.username,
@@ -1442,6 +1442,34 @@ const Netdisk = {
         });
 
         return groups;
+    },
+
+    // 查看所有公共文件（管理员）
+    async adminListPublicFiles() {
+        this.requireAdmin();
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (data && data.files) || [];
+
+        // 获取用户名映射
+        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData.data && usersData.data.users) || [];
+        const userMap = {};
+        users.forEach(u => { userMap[u.id] = u.username; });
+
+        return files
+            .filter(f => f.isGlobal === true)
+            .map(f => ({
+                id: f.id,
+                name: f.name,
+                size: f.size,
+                type: f.type,
+                ownerName: userMap[f.ownerId] || '未知用户',
+                shareCreatedAt: f.shareCreatedAt || f.uploadedAt,
+                shareViewCount: f.shareViewCount || 0,
+                shareDownloadCount: f.shareDownloadCount || 0,
+                status: f.status || 'normal',
+                uploadedAt: f.uploadedAt
+            }));
     },
 
     // 下架文件（管理员） - 取消分享并标记为下架

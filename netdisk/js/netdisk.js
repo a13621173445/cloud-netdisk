@@ -923,6 +923,32 @@ const Netdisk = {
             }));
     },
 
+    // ============ 获取我的分享列表 ============
+
+    async listMyShares() {
+        const currentUser = this.getCurrentUserLocal();
+        if (!currentUser) throw new Error('请先登录');
+
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (data && data.files) || [];
+
+        return files
+            .filter(f => f.ownerId === currentUser.id && f.shared === true)
+            .map(f => ({
+                id: f.id,
+                name: f.name,
+                size: f.size,
+                type: f.type,
+                shareToken: f.shareToken,
+                shareUrl: `${CONFIG.getPagesUrl()}/shared.html?token=${f.shareToken}`,
+                shareExpireDays: f.shareExpireDays !== undefined ? f.shareExpireDays : -1,
+                shareExpireAt: f.shareExpireAt || null,
+                shareMaxDownloads: f.shareMaxDownloads !== undefined ? f.shareMaxDownloads : -1,
+                shareDownloadCount: f.shareDownloadCount || 0,
+                uploadedAt: f.uploadedAt
+            }));
+    },
+
     // ============ 下载文件 ============
 
     async downloadFile(fileId) {

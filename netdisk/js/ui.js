@@ -267,6 +267,29 @@ const UI = {
         }).join('');
     },
 
+    // ============ 强制下载（不预览） ============
+
+    /**
+     * 通过 fetch + Blob 强制下载文件，避免浏览器预览（图片/PDF/文本也会直接下载）
+     * @param {string} url - 文件直链
+     * @param {string} filename - 下载文件名
+     */
+    async forceDownload(url, filename) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('下载失败: ' + response.status);
+        }
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename || 'download';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+    },
+
     // ============ 复制到剪贴板 ============
 
     async copyToClipboard(text) {

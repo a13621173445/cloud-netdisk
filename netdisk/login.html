@@ -55,20 +55,17 @@
     <script src="js/netdisk.js?v=11"></script>
     <script src="js/ui.js?v=8"></script>
     <script>
-        // 检查配置
         (async () => {
             if (!(await CONFIG.isConfigured())) {
                 document.getElementById('login-form').innerHTML = '<div class="alert alert-error" style="text-align:center;padding:40px;"><h3>系统未配置</h3><p style="margin-top:12px;color:var(--text-light);">请检查 config.js 中的 Token 配置是否正确。</p></div>';
                 return;
             }
 
-            // 如果已登录，跳转到首页
             if (Netdisk.getCurrentUserLocal()) {
                 window.location.href = 'index.html';
                 return;
             }
 
-            // 同一天、同一 IP 自动登录
             try {
                 const autoLogin = await Netdisk.checkAutoLogin();
                 if (autoLogin) {
@@ -76,7 +73,6 @@
                     setTimeout(() => window.location.href = 'index.html', 500);
                 }
             } catch (e) {
-                // 自动登录失败，忽略，显示登录表单
             }
         })();
 
@@ -99,19 +95,15 @@
                 btn.disabled = false;
                 btn.textContent = '登录';
 
-                // 如果是未验证邮箱，显示重新发送选项
-                if (error.message.includes('验证')) {
+                if (error.message.includes('邮箱未验证')) {
                     document.getElementById('resend-section').style.display = 'block';
                     document.getElementById('resend-link').onclick = async (ev) => {
                         ev.preventDefault();
-                        UI.showLoading('发送中...');
                         try {
                             await Netdisk.resendVerification(email);
-                            UI.hideLoading();
-                            UI.showMessage('验证邮件已重新发送', 'success');
-                        } catch (err) {
-                            UI.hideLoading();
-                            UI.showMessage(err.message, 'error');
+                            UI.showMessage('验证邮件已发送', 'success');
+                        } catch (e) {
+                            UI.showMessage(e.message, 'error');
                         }
                     };
                 }

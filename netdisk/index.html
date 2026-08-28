@@ -99,7 +99,7 @@
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=15"></script>
-    <script src="js/ui.js?v=18"></script>
+    <script src="js/ui.js?v=19"></script>
     <script>
         const App = {
             currentUser: null,
@@ -284,8 +284,8 @@
                     const result = await Netdisk.downloadFile(fileId);
                     UI.hideLoading();
 
-                    // 在新标签页打开文件，交给浏览器处理（可预览的直接预览，二进制触发下载）
-                    window.open(result.url, '_blank');
+                    // 强制下载，不预览
+                    await UI.forceDownload(result.url, result.name);
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');

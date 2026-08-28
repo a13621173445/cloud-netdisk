@@ -20,7 +20,7 @@
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=15"></script>
-    <script src="js/ui.js?v=8"></script>
+    <script src="js/ui.js?v=19"></script>
     <script>
         (async () => {
             if (!(await CONFIG.isConfigured())) {
@@ -59,10 +59,19 @@
                     <div class="share-file-meta" style="margin-top: 8px;">
                         访问 ${file.viewCount || 0} 次 · 下载 ${file.downloadCount || 0} 次 · 有效期 ${expireText}
                     </div>
-                    <a href="${UI.escapeHtml(file.url)}" class="btn btn-primary" style="margin-top: 24px;" target="_blank" rel="noopener" onclick="Netdisk.trackShareDownload('${token}')">
+                    <button class="btn btn-primary" id="download-btn" style="margin-top: 24px;">
                         下载文件
-                    </a>
+                    </button>
                 `;
+
+                document.getElementById('download-btn').addEventListener('click', async () => {
+                    Netdisk.trackShareDownload(token);
+                    try {
+                        await UI.forceDownload(file.url, file.name);
+                    } catch (e) {
+                        UI.showMessage(e.message, 'error');
+                    }
+                });
             } catch (error) {
                 document.getElementById('share-content').innerHTML = `
                     <div class="result-icon">❌</div>

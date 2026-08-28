@@ -257,7 +257,7 @@
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
     <script src="js/netdisk.js?v=15"></script>
-    <script src="js/ui.js?v=19"></script>
+    <script src="js/ui.js?v=20"></script>
     <script>
         const Admin = {
             currentUser: null,
@@ -436,7 +436,7 @@
                                         <td>${UI.escapeHtml(u.email)}</td>
                                         <td>${roleMap[u.role] || roleMap.user}</td>
                                         <td>${statusMap[u.status] || statusMap.active}</td>
-                                        <td>${UI.formatDate(u.createdAt)}</td>
+                                        <td>${UI.formatDateTime(u.createdAt)}</td>
                                         <td>
                                             <div class="admin-actions">
                                                 ${this.canSetAdmin(u) ? (u.role === 'admin' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', false)">取消管理员</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', true)">设为管理员</button>`) : ''}

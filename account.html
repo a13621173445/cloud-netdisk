@@ -1,0 +1,842 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户设置 - GitHub Netdisk</title>
+    <link rel="stylesheet" href=" <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户设置 - GitHub Netdisk</title>
+    <link rel="stylesheet" href="css/style.css?v=18">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <div class="navbar-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <span id="user-name">用户</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="admin-btn" style="display: none;">管理后台</button>
+                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container dashboard">
+        <div class="dashboard-header">
+            <h2>账户设置</h2>
+            <a href="index.html" class="btn btn-secondary btn-sm">返回网盘</a>
+        </div>
+
+        <!-- 当前用户信息 -->
+        <div class="account-card">
+            <h3>账户信息</h3>
+            <div class="account-info">
+                <div class="account-row">
+                    <span class="account-label">用户名</span>
+                    <span class="account-value" id="info-username">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">邮箱</span>
+                    <span class="account-value" id="info-email">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">邮箱验证</span>
+                    <span class="account-value" id="info-verified">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">角色</span>
+                    <span class="account-value" id="info-role">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 管理员设置（仅超级管理员可见） -->
+        <div class="account-card" id="admin-settings-card" style="display: none;">
+            <h3>管理员设置</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">设置或取消其他用户的管理员角色。</p>
+            <div class="form-group">
+                <label>选择用户</label>
+                <select id="admin-target-user">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>当前角色</label>
+                <span class="account-value" id="admin-target-role">-</span>
+            </div>
+            <button class="btn btn-primary" id="set-admin-btn">设为管理员</button>
+            <button class="btn btn-secondary" id="remove-admin-btn" style="margin-top: 8px;">取消管理员</button>
+        </div>
+
+        <!-- 修改密码 -->
+        <div class="account-card">
+            <h3>修改密码</h3>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="old-pwd" placeholder="输入当前密码">
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" id="new-pwd" placeholder="至少 6 个字符">
+            </div>
+            <div class="form-group">
+                <label>确认新密码</label>
+                <input type="password" id="confirm-new-pwd" placeholder="再次输入新密码">
+            </div>
+            <button class="btn btn-primary" id="change-pwd-btn">确认修改密码</button>
+        </div>
+
+        <!-- 修改邮箱 -->
+        <div class="account-card">
+            <h3>修改邮箱</h3>
+            <div class="form-group">
+                <label>新邮箱</label>
+                <input type="email" id="new-email" placeholder="输入新邮箱地址">
+            </div>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="email-pwd" placeholder="输入当前密码以确认操作">
+            </div>
+            <button class="btn btn-primary" id="change-email-btn">确认修改邮箱</button>
+        </div>
+
+        <!-- 申请解禁 -->
+        <div class="account-card" id="unfreeze-card" style="display: none;">
+            <h3>申请解禁</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">你的账户已被禁用，可以提交解禁申请，等待管理员处理。</p>
+            <div class="form-group">
+                <label>申请原因（最多 500 字）</label>
+                <textarea id="unfreeze-reason" placeholder="请说明申请解禁的原因..." maxlength="500" style="width:100%;min-height:100px;resize:vertical;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;line-height:1.5;"></textarea>
+                <div class="hint" id="unfreeze-char-count">已输入 0 / 500 字</div>
+            </div>
+            <button class="btn btn-primary" id="request-unfreeze-btn">提交解禁申请</button>
+        </div>
+
+        <!-- 注销账户 -->
+        <div class="account-card">
+            <h3>注销账户</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">注销后账户及所有文件将被永久删除，此操作不可恢复！需要密码和邮箱验证码双重确认。</p>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="delete-account-pwd" placeholder="输入当前密码">
+            </div>
+            <div class="form-group">
+                <label>邮箱验证码</label>
+                <input type="text" id="delete-account-code" placeholder="先获取验证码，再输入确认注销" maxlength="6" style="letter-spacing: 4px; text-align: center; font-size: 18px;">
+            </div>
+            <button class="btn btn-secondary" id="send-delete-code-btn" style="margin-bottom: 8px;">获取注销验证码</button>
+            <button class="btn btn-danger" id="delete-account-btn">注销账户</button>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
+    <script src="js/netdisk.js?v=11"></script>
+    <script src="js/ui.js?v=18"></script>
+    <script>
+        const Account = {
+            currentUser: null,
+
+            async init() {
+                // 检查配置
+                if (!(await CONFIG.isConfigured())) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 检查登录状态：本地缓存不存在则重置为未登录并回到登录页
+                this.currentUser = Netdisk.getCurrentUserLocal();
+                if (!this.currentUser) {
+                    Netdisk.logout();
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 尝试从服务端刷新用户信息（尽力而为，不因失败跳转）
+                // 本地缓存存在即视为已登录，服务端验证仅用于刷新信息
+                try {
+                    const serverUser = await Netdisk.getCurrentUser();
+                    if (serverUser) {
+                        this.currentUser = serverUser;
+                    }
+                } catch (e) {
+                    // 网络异常时使用本地缓存，不跳转
+                }
+
+                // 显示用户信息
+                document.getElementById('user-name').textContent = this.currentUser.username;
+                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                // 管理员显示管理后台入口
+                if (this.currentUser.role === 'admin' || this.currentUser.role === 'superadmin') {
+                    document.getElementById('admin-btn').style.display = 'inline-flex';
+                }
+
+                // 超级管理员显示管理员设置卡片
+                if (this.currentUser.role === 'superadmin') {
+                    document.getElementById('admin-settings-card').style.display = 'block';
+                    await this.loadAdminTargetUsers();
+                }
+
+                // 显示账户信息
+                this.displayAccountInfo();
+
+                // 绑定事件
+                this.bindEvents();
+            },
+
+            displayAccountInfo() {
+                document.getElementById('info-username').textContent = this.currentUser.username;
+                document.getElementById('info-email').textContent = this.currentUser.email;
+                document.getElementById('info-verified').textContent = this.currentUser.verified ? '已验证' : '未验证';
+                const role = this.currentUser.role;
+                document.getElementById('info-role').textContent = role === 'superadmin' ? '超级管理员' : (role === 'admin' ? '管理员' : '普通用户');
+
+                // 根据账户状态显示/隐藏申请解冻卡片
+                const status = this.currentUser.status || 'active';
+                const unfreezeCard = document.getElementById('unfreeze-card');
+                if (unfreezeCard) {
+                    unfreezeCard.style.display = (status === 'frozen' || status === 'disabled') ? 'block' : 'none';
+                }
+            },
+
+            // 加载用户列表（用于管理员设置）
+            async loadAdminTargetUsers() {
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const select = document.getElementById('admin-target-user');
+                    select.innerHTML = '<option value="">请选择用户</option>';
+                    users.forEach(u => {
+                        if (u.id !== this.currentUser.id) {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            opt.textContent = `${u.username} (${u.email})`;
+                            select.appendChild(opt);
+                        }
+                    });
+                    // 绑定选择事件
+                    select.addEventListener('change', () => this.updateTargetRole());
+                } catch (e) {
+                    document.getElementById('admin-target-user').innerHTML = '<option value="">加载失败</option>';
+                }
+            },
+
+            // 更新目标用户角色显示
+            async updateTargetRole() {
+                const userId = document.getElementById('admin-target-user').value;
+                const roleEl = document.getElementById('admin-target-role');
+                if (!userId) {
+                    roleEl.textContent = '-';
+                    return;
+                }
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const user = users.find(u => u.id === userId);
+                    if (user) {
+                        const role = user.role;
+                        roleEl.textContent = role === 'superadmin' ? '超级管理员' : (role === 'admin' ? '管理员' : '普通用户');
+                    }
+                } catch (e) {
+                    roleEl.textContent = '获取失败';
+                }
+            },
+
+            bindEvents() {
+                // 退出登录
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await Netdisk.logout();
+                    window.location.href = 'login.html';
+                });
+
+                // 管理后台
+                document.getElementById('admin-btn').addEventListener('click', () => {
+                    window.location.href = 'admin.html';
+                });
+
+                // 设为管理员
+                document.getElementById('set-admin-btn').addEventListener('click', async () => {
+                    const userId = document.getElementById('admin-target-user').value;
+                    if (!userId) {
+                        UI.showMessage('请先选择用户', 'warning');
+                        return;
+                    }
+                    try {
+                        UI.showLoading('设置中...');
+                        const result = await Netdisk.setAdminRole(userId, true);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        await this.updateTargetRole();
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 取消管理员
+                document.getElementById('remove-admin-btn').addEventListener('click', async () => {
+                    const userId = document.getElementById('admin-target-user').value;
+                    if (!userId) {
+                        UI.showMessage('请先选择用户', 'warning');
+                        return;
+                    }
+                    try {
+                        UI.showLoading('设置中...');
+                        const result = await Netdisk.setAdminRole(userId, false);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        await this.updateTargetRole();
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 修改密码
+                document.getElementById('change-pwd-btn').addEventListener('click', async () => {
+                    const oldPwd = document.getElementById('old-pwd').value;
+                    const newPwd = document.getElementById('new-pwd').value;
+                    const confirmPwd = document.getElementById('confirm-new-pwd').value;
+
+                    if (!oldPwd || !newPwd || !confirmPwd) {
+                        UI.showMessage('请填写所有字段', 'warning');
+                        return;
+                    }
+                    if (newPwd !== confirmPwd) {
+                        UI.showMessage('两次新密码不一致', 'error');
+                        return;
+                    }
+
+                    try {
+                        UI.showLoading('修改中...');
+                        await Netdisk.changePassword(oldPwd, newPwd);
+                        UI.hideLoading();
+                        UI.showMessage('密码修改成功', 'success');
+                        document.getElementById('old-pwd').value = '';
+                        document.getElementById('new-pwd').value = '';
+                        document.getElementById('confirm-new-pwd').value = '';
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 修改邮箱
+                document.getElementById('change-email-btn').addEventListener('click', async () => {
+                    const newEmail = document.getElementById('new-email').value;
+                    const password = document.getElementById('email-pwd').value;
+
+                    if (!newEmail || !password) {
+                        UI.showMessage('请填写所有字段', 'warning');
+                        return;
+                    }
+
+                    try {
+                        UI.showLoading('修改中...');
+                        const result = await Netdisk.changeEmail(newEmail, password);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        document.getElementById('new-email').value = '';
+                        document.getElementById('email-pwd').value = '';
+                        // 刷新账户信息
+                        this.currentUser = await Netdisk.getCurrentUser();
+                        if (this.currentUser) {
+                            this.displayAccountInfo();
+                        }
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 提交解禁申请
+                document.getElementById('request-unfreeze-btn').addEventListener('click', async () => {
+                    const reason = document.getElementById('unfreeze-reason').value.trim();
+                    try {
+                        UI.showLoading('提交中...');
+                        const result = await Netdisk.requestUnfreeze(reason);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 字符计数
+                const reasonInput = document.getElementById('unfreeze-reason');
+                const charCount = document.getElementById('unfreeze-char-count');
+                reasonInput.addEventListener('input', () => {
+                    const len = reasonInput.value.length;
+                    charCount.textContent = `已输入 ${len} / 500 字`;
+                });
+
+                // 获取注销验证码
+                document.getElementById('send-delete-code-btn').addEventListener('click', async () => {
+                    try {
+                        UI.showLoading('发送中...');
+                        const result = await Netdisk.sendDeleteAccountCode();
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 注销账户
+                document.getElementById('delete-account-btn').addEventListener('click', async () => {
+                    const password = document.getElementById('delete-account-pwd').value;
+                    const code = document.getElementById('delete-account-code').value.trim();
+                    if (!password) {
+                        UI.showMessage('请输入当前密码', 'warning');
+                        return;
+                    }
+                    if (!code) {
+                        UI.showMessage('请先获取验证码并输入', 'warning');
+                        return;
+                    }
+
+                    const confirmed = await UI.confirm('确定要注销账户吗？账户及所有文件将被永久删除，此操作不可恢复！', '注销账户', '注销', '取消');
+                    if (!confirmed) return;
+
+                    try {
+                        UI.showLoading('注销中...');
+                        const result = await Netdisk.deleteMyAccount(password, code);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        setTimeout(() => window.location.href = 'login.html', 1500);
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+            }
+        };
+
+        Account.init();
+    </script>
+</body>
+</html>
+.Groups[1].Value + "19" ">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <div class="navbar-right">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <span id="user-name">用户</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="admin-btn" style="display: none;">管理后台</button>
+                <button class="btn btn-secondary btn-sm" id="logout-btn">退出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container dashboard">
+        <div class="dashboard-header">
+            <h2>账户设置</h2>
+            <a href="index.html" class="btn btn-secondary btn-sm">返回网盘</a>
+        </div>
+
+        <!-- 当前用户信息 -->
+        <div class="account-card">
+            <h3>账户信息</h3>
+            <div class="account-info">
+                <div class="account-row">
+                    <span class="account-label">用户名</span>
+                    <span class="account-value" id="info-username">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">邮箱</span>
+                    <span class="account-value" id="info-email">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">邮箱验证</span>
+                    <span class="account-value" id="info-verified">-</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">角色</span>
+                    <span class="account-value" id="info-role">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 管理员设置（仅超级管理员可见） -->
+        <div class="account-card" id="admin-settings-card" style="display: none;">
+            <h3>管理员设置</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">设置或取消其他用户的管理员角色。</p>
+            <div class="form-group">
+                <label>选择用户</label>
+                <select id="admin-target-user">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>当前角色</label>
+                <span class="account-value" id="admin-target-role">-</span>
+            </div>
+            <button class="btn btn-primary" id="set-admin-btn">设为管理员</button>
+            <button class="btn btn-secondary" id="remove-admin-btn" style="margin-top: 8px;">取消管理员</button>
+        </div>
+
+        <!-- 修改密码 -->
+        <div class="account-card">
+            <h3>修改密码</h3>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="old-pwd" placeholder="输入当前密码">
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" id="new-pwd" placeholder="至少 6 个字符">
+            </div>
+            <div class="form-group">
+                <label>确认新密码</label>
+                <input type="password" id="confirm-new-pwd" placeholder="再次输入新密码">
+            </div>
+            <button class="btn btn-primary" id="change-pwd-btn">确认修改密码</button>
+        </div>
+
+        <!-- 修改邮箱 -->
+        <div class="account-card">
+            <h3>修改邮箱</h3>
+            <div class="form-group">
+                <label>新邮箱</label>
+                <input type="email" id="new-email" placeholder="输入新邮箱地址">
+            </div>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="email-pwd" placeholder="输入当前密码以确认操作">
+            </div>
+            <button class="btn btn-primary" id="change-email-btn">确认修改邮箱</button>
+        </div>
+
+        <!-- 申请解禁 -->
+        <div class="account-card" id="unfreeze-card" style="display: none;">
+            <h3>申请解禁</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">你的账户已被禁用，可以提交解禁申请，等待管理员处理。</p>
+            <div class="form-group">
+                <label>申请原因（最多 500 字）</label>
+                <textarea id="unfreeze-reason" placeholder="请说明申请解禁的原因..." maxlength="500" style="width:100%;min-height:100px;resize:vertical;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;line-height:1.5;"></textarea>
+                <div class="hint" id="unfreeze-char-count">已输入 0 / 500 字</div>
+            </div>
+            <button class="btn btn-primary" id="request-unfreeze-btn">提交解禁申请</button>
+        </div>
+
+        <!-- 注销账户 -->
+        <div class="account-card">
+            <h3>注销账户</h3>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 13px;">注销后账户及所有文件将被永久删除，此操作不可恢复！需要密码和邮箱验证码双重确认。</p>
+            <div class="form-group">
+                <label>当前密码</label>
+                <input type="password" id="delete-account-pwd" placeholder="输入当前密码">
+            </div>
+            <div class="form-group">
+                <label>邮箱验证码</label>
+                <input type="text" id="delete-account-code" placeholder="先获取验证码，再输入确认注销" maxlength="6" style="letter-spacing: 4px; text-align: center; font-size: 18px;">
+            </div>
+            <button class="btn btn-secondary" id="send-delete-code-btn" style="margin-bottom: 8px;">获取注销验证码</button>
+            <button class="btn btn-danger" id="delete-account-btn">注销账户</button>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=8"></script>
+    <script src="js/github.js?v=6"></script>
+    <script src="js/netdisk.js?v=11"></script>
+    <script src="js/ui.js?v=18"></script>
+    <script>
+        const Account = {
+            currentUser: null,
+
+            async init() {
+                // 检查配置
+                if (!(await CONFIG.isConfigured())) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 检查登录状态：本地缓存不存在则重置为未登录并回到登录页
+                this.currentUser = Netdisk.getCurrentUserLocal();
+                if (!this.currentUser) {
+                    Netdisk.logout();
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 尝试从服务端刷新用户信息（尽力而为，不因失败跳转）
+                // 本地缓存存在即视为已登录，服务端验证仅用于刷新信息
+                try {
+                    const serverUser = await Netdisk.getCurrentUser();
+                    if (serverUser) {
+                        this.currentUser = serverUser;
+                    }
+                } catch (e) {
+                    // 网络异常时使用本地缓存，不跳转
+                }
+
+                // 显示用户信息
+                document.getElementById('user-name').textContent = this.currentUser.username;
+                document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();
+
+                // 管理员显示管理后台入口
+                if (this.currentUser.role === 'admin' || this.currentUser.role === 'superadmin') {
+                    document.getElementById('admin-btn').style.display = 'inline-flex';
+                }
+
+                // 超级管理员显示管理员设置卡片
+                if (this.currentUser.role === 'superadmin') {
+                    document.getElementById('admin-settings-card').style.display = 'block';
+                    await this.loadAdminTargetUsers();
+                }
+
+                // 显示账户信息
+                this.displayAccountInfo();
+
+                // 绑定事件
+                this.bindEvents();
+            },
+
+            displayAccountInfo() {
+                document.getElementById('info-username').textContent = this.currentUser.username;
+                document.getElementById('info-email').textContent = this.currentUser.email;
+                document.getElementById('info-verified').textContent = this.currentUser.verified ? '已验证' : '未验证';
+                const role = this.currentUser.role;
+                document.getElementById('info-role').textContent = role === 'superadmin' ? '超级管理员' : (role === 'admin' ? '管理员' : '普通用户');
+
+                // 根据账户状态显示/隐藏申请解冻卡片
+                const status = this.currentUser.status || 'active';
+                const unfreezeCard = document.getElementById('unfreeze-card');
+                if (unfreezeCard) {
+                    unfreezeCard.style.display = (status === 'frozen' || status === 'disabled') ? 'block' : 'none';
+                }
+            },
+
+            // 加载用户列表（用于管理员设置）
+            async loadAdminTargetUsers() {
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const select = document.getElementById('admin-target-user');
+                    select.innerHTML = '<option value="">请选择用户</option>';
+                    users.forEach(u => {
+                        if (u.id !== this.currentUser.id) {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            opt.textContent = `${u.username} (${u.email})`;
+                            select.appendChild(opt);
+                        }
+                    });
+                    // 绑定选择事件
+                    select.addEventListener('change', () => this.updateTargetRole());
+                } catch (e) {
+                    document.getElementById('admin-target-user').innerHTML = '<option value="">加载失败</option>';
+                }
+            },
+
+            // 更新目标用户角色显示
+            async updateTargetRole() {
+                const userId = document.getElementById('admin-target-user').value;
+                const roleEl = document.getElementById('admin-target-role');
+                if (!userId) {
+                    roleEl.textContent = '-';
+                    return;
+                }
+                try {
+                    const users = await Netdisk.adminListUsers();
+                    const user = users.find(u => u.id === userId);
+                    if (user) {
+                        const role = user.role;
+                        roleEl.textContent = role === 'superadmin' ? '超级管理员' : (role === 'admin' ? '管理员' : '普通用户');
+                    }
+                } catch (e) {
+                    roleEl.textContent = '获取失败';
+                }
+            },
+
+            bindEvents() {
+                // 退出登录
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await Netdisk.logout();
+                    window.location.href = 'login.html';
+                });
+
+                // 管理后台
+                document.getElementById('admin-btn').addEventListener('click', () => {
+                    window.location.href = 'admin.html';
+                });
+
+                // 设为管理员
+                document.getElementById('set-admin-btn').addEventListener('click', async () => {
+                    const userId = document.getElementById('admin-target-user').value;
+                    if (!userId) {
+                        UI.showMessage('请先选择用户', 'warning');
+                        return;
+                    }
+                    try {
+                        UI.showLoading('设置中...');
+                        const result = await Netdisk.setAdminRole(userId, true);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        await this.updateTargetRole();
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 取消管理员
+                document.getElementById('remove-admin-btn').addEventListener('click', async () => {
+                    const userId = document.getElementById('admin-target-user').value;
+                    if (!userId) {
+                        UI.showMessage('请先选择用户', 'warning');
+                        return;
+                    }
+                    try {
+                        UI.showLoading('设置中...');
+                        const result = await Netdisk.setAdminRole(userId, false);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        await this.updateTargetRole();
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 修改密码
+                document.getElementById('change-pwd-btn').addEventListener('click', async () => {
+                    const oldPwd = document.getElementById('old-pwd').value;
+                    const newPwd = document.getElementById('new-pwd').value;
+                    const confirmPwd = document.getElementById('confirm-new-pwd').value;
+
+                    if (!oldPwd || !newPwd || !confirmPwd) {
+                        UI.showMessage('请填写所有字段', 'warning');
+                        return;
+                    }
+                    if (newPwd !== confirmPwd) {
+                        UI.showMessage('两次新密码不一致', 'error');
+                        return;
+                    }
+
+                    try {
+                        UI.showLoading('修改中...');
+                        await Netdisk.changePassword(oldPwd, newPwd);
+                        UI.hideLoading();
+                        UI.showMessage('密码修改成功', 'success');
+                        document.getElementById('old-pwd').value = '';
+                        document.getElementById('new-pwd').value = '';
+                        document.getElementById('confirm-new-pwd').value = '';
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 修改邮箱
+                document.getElementById('change-email-btn').addEventListener('click', async () => {
+                    const newEmail = document.getElementById('new-email').value;
+                    const password = document.getElementById('email-pwd').value;
+
+                    if (!newEmail || !password) {
+                        UI.showMessage('请填写所有字段', 'warning');
+                        return;
+                    }
+
+                    try {
+                        UI.showLoading('修改中...');
+                        const result = await Netdisk.changeEmail(newEmail, password);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        document.getElementById('new-email').value = '';
+                        document.getElementById('email-pwd').value = '';
+                        // 刷新账户信息
+                        this.currentUser = await Netdisk.getCurrentUser();
+                        if (this.currentUser) {
+                            this.displayAccountInfo();
+                        }
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 提交解禁申请
+                document.getElementById('request-unfreeze-btn').addEventListener('click', async () => {
+                    const reason = document.getElementById('unfreeze-reason').value.trim();
+                    try {
+                        UI.showLoading('提交中...');
+                        const result = await Netdisk.requestUnfreeze(reason);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 字符计数
+                const reasonInput = document.getElementById('unfreeze-reason');
+                const charCount = document.getElementById('unfreeze-char-count');
+                reasonInput.addEventListener('input', () => {
+                    const len = reasonInput.value.length;
+                    charCount.textContent = `已输入 ${len} / 500 字`;
+                });
+
+                // 获取注销验证码
+                document.getElementById('send-delete-code-btn').addEventListener('click', async () => {
+                    try {
+                        UI.showLoading('发送中...');
+                        const result = await Netdisk.sendDeleteAccountCode();
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+
+                // 注销账户
+                document.getElementById('delete-account-btn').addEventListener('click', async () => {
+                    const password = document.getElementById('delete-account-pwd').value;
+                    const code = document.getElementById('delete-account-code').value.trim();
+                    if (!password) {
+                        UI.showMessage('请输入当前密码', 'warning');
+                        return;
+                    }
+                    if (!code) {
+                        UI.showMessage('请先获取验证码并输入', 'warning');
+                        return;
+                    }
+
+                    const confirmed = await UI.confirm('确定要注销账户吗？账户及所有文件将被永久删除，此操作不可恢复！', '注销账户', '注销', '取消');
+                    if (!confirmed) return;
+
+                    try {
+                        UI.showLoading('注销中...');
+                        const result = await Netdisk.deleteMyAccount(password, code);
+                        UI.hideLoading();
+                        UI.showMessage(result.message, 'success');
+                        setTimeout(() => window.location.href = 'login.html', 1500);
+                    } catch (error) {
+                        UI.hideLoading();
+                        UI.showMessage(error.message, 'error');
+                    }
+                });
+            }
+        };
+
+        Account.init();
+    </script>
+</body>
+</html>

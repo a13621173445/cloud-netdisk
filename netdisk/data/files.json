@@ -105,6 +105,20 @@
       "shareViewCount": 0,
       "shareDownloadCount": 2,
       "uploadedAt": "2026-08-28T05:36:24.955Z"
+    },
+    {
+      "id": "971330dd-e048-4b8e-b360-42a0d5dc3fe2",
+      "name": "1786247509117.gif",
+      "size": 2153039,
+      "type": "image/gif",
+      "path": "netdisk/storage/971330dd-e048-4b8e-b360-42a0d5dc3fe2_1786247509117.gif",
+      "ownerId": "1a8bd14a-e314-416b-b6c6-214a3614f251",
+      "shared": false,
+      "shareToken": null,
+      "shareCreatedAt": "2026-08-28T05:54:04.111Z",
+      "shareViewCount": 0,
+      "shareDownloadCount": 0,
+      "uploadedAt": "2026-08-28T05:54:04.111Z"
     }
   ]
 }

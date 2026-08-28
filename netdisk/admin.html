@@ -362,6 +362,25 @@
                 return false;
             },
 
+            // 判断当前用户是否能设置目标用户的管理员角色（仅超级管理员）
+            canSetAdmin(targetUser) {
+                return this.currentUser && this.currentUser.role === 'superadmin' && (targetUser.role || 'user') !== 'superadmin';
+            },
+
+            // 设置/取消管理员角色
+            async setAdminRole(userId, makeAdmin) {
+                try {
+                    UI.showLoading('处理中...');
+                    const result = await Netdisk.setAdminRole(userId, makeAdmin);
+                    UI.hideLoading();
+                    UI.showMessage(result.message, 'success');
+                    await this.loadUsers();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
             async loadUsers() {
                 try {
                     const users = await Netdisk.adminListUsers();
@@ -406,6 +425,7 @@
                                         <td>${UI.formatDate(u.createdAt)}</td>
                                         <td>
                                             <div class="admin-actions">
+                                                ${this.canSetAdmin(u) ? (u.role === 'admin' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', false)">取消管理员</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', true)">设为管理员</button>`) : ''}
                                                 ${this.canOperateUser(u) ? `
                                                     ${u.status !== 'disabled' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.disableUser('${u.id}')">禁用</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解禁</button>`}
                                                     ${u.status !== 'frozen' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.freezeUser('${u.id}')">冻结</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解冻</button>`}

@@ -58,7 +58,7 @@
       "shareExpireDays": -1,
       "shareExpireAt": null,
       "shareMaxDownloads": -1,
-      "shareDownloadCount": 0
+      "shareDownloadCount": 1
     }
   ]
 }

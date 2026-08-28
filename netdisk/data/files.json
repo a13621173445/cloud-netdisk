@@ -51,10 +51,14 @@
       "type": "image/png",
       "path": "netdisk/storage/7207a767-f943-4ab2-a373-44e4730104a1________.png",
       "ownerId": "f421949d-7075-42ba-9e81-7ccabf34206d",
-      "shared": false,
-      "shareToken": null,
+      "shared": true,
+      "shareToken": "5b18091adf136579582bc9eaa2b589ebdb71868f89adb073b60164a1ebbb8100",
       "isGlobal": false,
-      "uploadedAt": "2026-08-28T04:14:01.989Z"
+      "uploadedAt": "2026-08-28T04:14:01.989Z",
+      "shareExpireDays": -1,
+      "shareExpireAt": null,
+      "shareMaxDownloads": -1,
+      "shareDownloadCount": 0
     }
   ]
 }

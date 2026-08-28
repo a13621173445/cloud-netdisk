@@ -846,7 +846,7 @@ const Netdisk = {
 
     // ============ 文件上传 ============
 
-    async uploadFile(file, isGlobal = false) {
+    async uploadFile(file) {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
 
@@ -872,7 +872,6 @@ const Netdisk = {
             ownerId: currentUser.id,
             shared: false,
             shareToken: null,
-            isGlobal: !!isGlobal,
             shareCreatedAt: new Date().toISOString(),
             shareViewCount: 0,
             shareDownloadCount: 0,
@@ -942,7 +941,7 @@ const Netdisk = {
         users.forEach(u => { userMap[u.id] = u.username; });
 
         return files
-            .filter(f => f.ownerId === currentUser.id && f.shared === true)
+            .filter(f => f.ownerId === currentUser.id && f.shared === true && !f.isGlobal)
             .map(f => ({
                 id: f.id,
                 name: f.name,
@@ -1027,6 +1026,60 @@ const Netdisk = {
         );
 
         return { success: true, message: '文件已删除' };
+    },
+
+    // ============ 创建公共分享 ============
+
+    async createPublicShare(fileId) {
+        const currentUser = this.getCurrentUserLocal();
+        if (!currentUser) throw new Error('请先登录');
+        if (!fileId) throw new Error('文件不存在');
+
+        // 读取源文件信息
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (data && data.files) || [];
+        const source = files.find(f => f.id === fileId && f.ownerId === currentUser.id);
+        if (!source) throw new Error('文件不存在或无权操作');
+
+        // 读取源文件内容
+        const content = await GitHubAPI.getContent(source.path);
+        if (!content) throw new Error('读取文件内容失败');
+
+        // 复制到公共存储（独立副本，不受原文件删除影响）
+        const publicId = generateId();
+        const safeName = sanitizeFilename(source.name);
+        const publicPath = `${CONFIG.PUBLIC_STORAGE_DIR}/${publicId}_${safeName}`;
+        await GitHubAPI.createOrUpdateFile(publicPath, content.content, `公共分享: ${source.name}`, null);
+
+        // 创建公共文件记录
+        const publicMeta = {
+            id: publicId,
+            name: source.name,
+            size: source.size,
+            type: source.type || 'application/octet-stream',
+            path: publicPath,
+            ownerId: currentUser.id,
+            shared: false,
+            shareToken: null,
+            isGlobal: true,
+            sourceFileId: source.id,
+            shareCreatedAt: new Date().toISOString(),
+            shareViewCount: 0,
+            shareDownloadCount: 0,
+            uploadedAt: new Date().toISOString()
+        };
+
+        await GitHubAPI.updateJsonData(
+            CONFIG.DATA.FILES,
+            (data) => {
+                if (!data.files) data.files = [];
+                data.files.push(publicMeta);
+                return data;
+            },
+            `公共分享: ${source.name}`
+        );
+
+        return { success: true, file: publicMeta };
     },
 
     // ============ 创建分享链接 ============

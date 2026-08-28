@@ -44,6 +44,15 @@
       "rememberMe": true,
       "ip": "",
       "lastLoginDate": "2026-08-28"
+    },
+    {
+      "token": "ecfaf6a903a2bbccec54259521facb751fddf1f31f1ba04dc8fc0608a7956a74",
+      "userId": "c940e119-b286-42c3-9dca-a36e1890ff2a",
+      "createdAt": "2026-08-28T07:36:53.513Z",
+      "expiresAt": "2026-09-27T07:36:53.513Z",
+      "rememberMe": true,
+      "ip": "",
+      "lastLoginDate": "2026-08-28"
     }
   ]
 }

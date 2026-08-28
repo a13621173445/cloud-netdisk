@@ -43,7 +43,8 @@
         }
         #users-container,
         #files-container,
-        #unfreeze-container {
+        #unfreeze-container,
+        #public-container {
             overflow-x: auto;
         }
         .admin-table th, .admin-table td {
@@ -200,6 +201,7 @@
         <div class="admin-tabs">
             <button class="admin-tab active" id="tab-users" onclick="Admin.switchTab('users')">用户管理</button>
             <button class="admin-tab" id="tab-files" onclick="Admin.switchTab('files')">文件管理</button>
+            <button class="admin-tab" id="tab-public" onclick="Admin.switchTab('public')">公共管理</button>
             <button class="admin-tab" id="tab-unfreeze" onclick="Admin.switchTab('unfreeze')">解冻申请</button>
         </div>
 
@@ -216,6 +218,13 @@
                 <input type="text" id="file-search-input" placeholder="搜索用户名..." oninput="Admin.searchFiles(this.value)">
             </div>
             <div id="files-container">
+                <div class="empty-admin">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 公共管理 -->
+        <div id="panel-public" style="display: none;">
+            <div id="public-container">
                 <div class="empty-admin">加载中...</div>
             </div>
         </div>
@@ -247,12 +256,13 @@
 
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
-    <script src="js/netdisk.js?v=14"></script>
+    <script src="js/netdisk.js?v=15"></script>
     <script src="js/ui.js?v=18"></script>
     <script>
         const Admin = {
             currentUser: null,
             fileGroups: [],
+            currentTab: 'users',
 
             async init() {
                 if (!(await CONFIG.isConfigured())) {
@@ -298,15 +308,19 @@
             },
 
             switchTab(tab) {
+                this.currentTab = tab;
                 document.getElementById('tab-users').classList.toggle('active', tab === 'users');
                 document.getElementById('tab-files').classList.toggle('active', tab === 'files');
+                document.getElementById('tab-public').classList.toggle('active', tab === 'public');
                 document.getElementById('tab-unfreeze').classList.toggle('active', tab === 'unfreeze');
                 document.getElementById('panel-users').style.display = tab === 'users' ? 'block' : 'none';
                 document.getElementById('panel-files').style.display = tab === 'files' ? 'block' : 'none';
+                document.getElementById('panel-public').style.display = tab === 'public' ? 'block' : 'none';
                 document.getElementById('panel-unfreeze').style.display = tab === 'unfreeze' ? 'block' : 'none';
 
                 if (tab === 'users') this.loadUsers();
                 if (tab === 'files') this.loadFiles();
+                if (tab === 'public') this.loadPublicFiles();
                 if (tab === 'unfreeze') this.loadUnfreezeRequests();
             },
 
@@ -481,7 +495,7 @@
                     const countText = g.fileCount === 0 ? '无文件' : `${g.fileCount} 个文件`;
                     const fileRows = g.files.map(f => `
                         <tr>
-                            <td>${UI.escapeHtml(f.name)}${f.isGlobal ? ' <span class="status-badge status-active" style="margin-left:4px;">公共</span>' : ''}</td>
+                            <td>${UI.escapeHtml(f.name)}</td>
                             <td>${UI.formatFileSize(f.size)}</td>
                             <td>${statusMap[f.status] || statusMap.normal}</td>
                             <td>${UI.formatDate(f.uploadedAt)}</td>
@@ -523,6 +537,70 @@
                 const isHidden = body.style.display === 'none';
                 body.style.display = isHidden ? 'block' : 'none';
                 if (toggle) toggle.textContent = isHidden ? '▴ 收起' : '▾ 展开';
+            },
+
+            async loadPublicFiles() {
+                try {
+                    const files = await Netdisk.adminListPublicFiles();
+                    this.renderPublicFiles(files || []);
+                } catch (error) {
+                    document.getElementById('public-container').innerHTML = `<div class="empty-admin">${UI.escapeHtml(error.message)}</div>`;
+                }
+            },
+
+            renderPublicFiles(files) {
+                const container = document.getElementById('public-container');
+                if (!files.length) {
+                    container.innerHTML = '<div class="empty-admin">暂无公共文件</div>';
+                    return;
+                }
+                const statusMap = {
+                    'normal': '<span class="status-badge status-normal">正常</span>',
+                    'taken_down': '<span class="status-badge status-taken_down">已下架</span>'
+                };
+                container.innerHTML = `
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>文件名</th>
+                                <th>上传者</th>
+                                <th>大小</th>
+                                <th>访问</th>
+                                <th>下载</th>
+                                <th>状态</th>
+                                <th>分享时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${files.map(f => `
+                                <tr>
+                                    <td>${UI.escapeHtml(f.name)}</td>
+                                    <td>${UI.escapeHtml(f.ownerName)}</td>
+                                    <td>${UI.formatFileSize(f.size)}</td>
+                                    <td>${f.shareViewCount || 0} 次</td>
+                                    <td>${f.shareDownloadCount || 0} 次</td>
+                                    <td>${statusMap[f.status] || statusMap.normal}</td>
+                                    <td>${UI.formatDate(f.shareCreatedAt || f.uploadedAt)}</td>
+                                    <td>
+                                        <div class="admin-actions">
+                                            <button class="btn btn-secondary btn-sm" onclick="Admin.downloadFile('${f.id}')">下载</button>
+                                            ${f.status !== 'taken_down' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.takeDownFile('${f.id}')">下架</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.restoreFile('${f.id}')">恢复</button>`}
+                                            <button class="btn btn-danger btn-sm" onclick="Admin.deleteFile('${f.id}')">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            },
+
+            refreshCurrentTab() {
+                if (this.currentTab === 'public') return this.loadPublicFiles();
+                if (this.currentTab === 'unfreeze') return this.loadUnfreezeRequests();
+                if (this.currentTab === 'files') return this.loadFiles();
+                return this.loadUsers();
             },
 
             // 加载解冻申请
@@ -676,7 +754,7 @@
                     await Netdisk.adminTakeDownFile(fileId);
                     UI.hideLoading();
                     UI.showMessage('文件已下架', 'success');
-                    await this.loadFiles();
+                    await this.refreshCurrentTab();
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');
@@ -689,7 +767,7 @@
                     await Netdisk.adminRestoreFile(fileId);
                     UI.hideLoading();
                     UI.showMessage('文件已恢复', 'success');
-                    await this.loadFiles();
+                    await this.refreshCurrentTab();
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');
@@ -704,7 +782,7 @@
                     await Netdisk.adminDeleteFile(fileId);
                     UI.hideLoading();
                     UI.showMessage('文件已删除', 'success');
-                    await this.loadFiles();
+                    await this.refreshCurrentTab();
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');

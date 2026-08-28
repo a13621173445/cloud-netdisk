@@ -873,6 +873,9 @@ const Netdisk = {
             shared: false,
             shareToken: null,
             isGlobal: !!isGlobal,
+            shareCreatedAt: new Date().toISOString(),
+            shareViewCount: 0,
+            shareDownloadCount: 0,
             uploadedAt: new Date().toISOString()
         };
 
@@ -932,6 +935,12 @@ const Netdisk = {
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
         const files = (data && data.files) || [];
 
+        // 获取用户名映射，用于展示上传账号
+        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData.data && usersData.data.users) || [];
+        const userMap = {};
+        users.forEach(u => { userMap[u.id] = u.username; });
+
         return files
             .filter(f => f.ownerId === currentUser.id && f.shared === true)
             .map(f => ({
@@ -939,11 +948,14 @@ const Netdisk = {
                 name: f.name,
                 size: f.size,
                 type: f.type,
+                ownerName: userMap[f.ownerId] || '未知用户',
                 shareToken: f.shareToken,
                 shareUrl: `${CONFIG.getPagesUrl()}/shared.html?token=${f.shareToken}`,
                 shareExpireDays: f.shareExpireDays !== undefined ? f.shareExpireDays : -1,
                 shareExpireAt: f.shareExpireAt || null,
                 shareMaxDownloads: f.shareMaxDownloads !== undefined ? f.shareMaxDownloads : -1,
+                shareCreatedAt: f.shareCreatedAt || f.uploadedAt,
+                shareViewCount: f.shareViewCount || 0,
                 shareDownloadCount: f.shareDownloadCount || 0,
                 uploadedAt: f.uploadedAt
             }));
@@ -960,6 +972,22 @@ const Netdisk = {
         const file = files.find(f => f.id === fileId && (f.ownerId === currentUser.id || f.isGlobal === true));
 
         if (!file) throw new Error('文件不存在或无权访问');
+
+        // 递增下载次数（私人/公共文件通用）
+        try {
+            await GitHubAPI.updateJsonData(
+                CONFIG.DATA.FILES,
+                (d) => {
+                    if (!d.files) d.files = [];
+                    const f = d.files.find(x => x.id === fileId);
+                    if (f) f.shareDownloadCount = (f.shareDownloadCount || 0) + 1;
+                    return d;
+                },
+                '文件下载次数递增'
+            );
+        } catch (e) {
+            // 忽略计数失败
+        }
 
         // 使用 raw URL 下载
         const rawUrl = GitHubAPI.getRawUrl(file.path);
@@ -1041,6 +1069,8 @@ const Netdisk = {
                 file.shareExpireDays = expireDays;
                 file.shareExpireAt = shareExpireAt;
                 file.shareMaxDownloads = maxDownloads;
+                file.shareCreatedAt = new Date().toISOString();
+                file.shareViewCount = 0;
                 file.shareDownloadCount = 0;
                 updatedFile = file;
                 return data;
@@ -1080,6 +1110,28 @@ const Netdisk = {
         return { success: true, message: '分享已取消' };
     },
 
+    // ============ 记录分享下载 ============
+
+    async trackShareDownload(shareToken) {
+        if (!shareToken) return;
+        try {
+            await GitHubAPI.updateJsonData(
+                CONFIG.DATA.FILES,
+                (data) => {
+                    if (!data.files) data.files = [];
+                    const f = data.files.find(x => x.shareToken === shareToken);
+                    if (f) {
+                        f.shareDownloadCount = (f.shareDownloadCount || 0) + 1;
+                    }
+                    return data;
+                },
+                '分享下载次数递增'
+            );
+        } catch (e) {
+            // 忽略计数失败
+        }
+    },
+
     // ============ 获取分享文件信息（公开访问） ============
 
     async getSharedFile(shareToken) {
@@ -1105,7 +1157,7 @@ const Netdisk = {
             throw new Error('分享链接已达到下载次数上限');
         }
 
-        // 递增下载次数
+        // 递增访问次数
         try {
             await GitHubAPI.updateJsonData(
                 CONFIG.DATA.FILES,
@@ -1113,14 +1165,14 @@ const Netdisk = {
                     if (!data.files) data.files = [];
                     const f = data.files.find(x => x.shareToken === shareToken);
                     if (f) {
-                        f.shareDownloadCount = (f.shareDownloadCount || 0) + 1;
+                        f.shareViewCount = (f.shareViewCount || 0) + 1;
                     }
                     return data;
                 },
-                '分享下载次数递增'
+                '分享访问次数递增'
             );
         } catch (e) {
-            // 递增失败不影响下载
+            // 递增失败不影响访问
         }
 
         const rawUrl = GitHubAPI.getRawUrl(file.path);
@@ -1130,9 +1182,11 @@ const Netdisk = {
             type: file.type,
             url: rawUrl,
             uploadedAt: file.uploadedAt,
+            shareCreatedAt: file.shareCreatedAt || file.uploadedAt,
             expireDays: file.shareExpireDays !== undefined ? file.shareExpireDays : -1,
             maxDownloads: maxDownloads,
-            downloadCount: downloadCount + 1
+            viewCount: (file.shareViewCount || 0) + 1,
+            downloadCount: file.shareDownloadCount || 0
         };
     },
 

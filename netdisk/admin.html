@@ -794,13 +794,8 @@
                     UI.showLoading('准备下载...');
                     const result = await Netdisk.adminDownloadFile(fileId);
                     UI.hideLoading();
-                    // 创建下载链接
-                    const a = document.createElement('a');
-                    a.href = result.url;
-                    a.download = result.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
+                    // 在新标签页打开文件，交给浏览器处理
+                    window.open(result.url, '_blank');
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');

@@ -51,6 +51,21 @@
       "statusReason": "",
       "statusUpdatedAt": "2026-08-27T23:15:02.797Z",
       "statusUpdatedBy": "a13621173445"
+    },
+    {
+      "id": "680ee0b9-48d0-4afd-b632-1159dfb33dab",
+      "username": "GrownAttic26541",
+      "email": "z15163955055@outlook.com",
+      "passwordHash": "33143893231555cd3b5d95dbe6bbafd49f154ca951eaca4fb9037012a001af61",
+      "salt": "70326cf4615e14ecda749c47e5476956",
+      "role": "user",
+      "status": "active",
+      "verified": false,
+      "verificationCode": "499119",
+      "verificationCodeExpiry": "2026-08-28T00:37:42.508Z",
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-28T00:27:42.508Z"
     }
   ]
 }

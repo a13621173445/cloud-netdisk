@@ -66,15 +66,26 @@
 3. 勾选 `repo` 权限（完整仓库访问）
 4. 生成并复制 Token
 
-### 5. 初始化配置
+### 5. 初始化配置（修改 js 文件）
 
-1. 访问 `https://你的用户名.github.io/仓库名/setup.html`
-2. 填写 GitHub 用户名、仓库名、Token
-3. 点击保存，验证通过后自动跳转登录页
+本项目通过直接修改 `js/config.js` 文件完成初始化配置，无需访问配置页面。
+
+打开 `js/config.js`，修改以下字段：
+
+```js
+const CONFIG = {
+    GITHUB_OWNER: '你的GitHub用户名',      // 修改为你的 GitHub 用户名
+    REPO_NAME: 'github-netdisk',           // 修改为你的仓库名
+    PAGES_BASE_URL: 'https://你的域名/netdisk',  // 修改为你的 GitHub Pages 地址
+    GITHUB_TOKEN: 'ghp_xxxxxxxxxxxx',      // 修改为你的 GitHub 个人访问令牌
+};
+```
+
+修改完成后，将代码推送到 GitHub 仓库即可生效。
 
 ### 6. 开始使用
 
-- 注册账号 → 收到验证邮件 → 点击验证链接 → 登录 → 上传/分享文件
+- 注册账号 → 收到验证码邮件 → 输入验证码完成验证 → 登录 → 上传/分享文件
 
 ## 项目结构
 
@@ -87,7 +98,7 @@ github-netdisk/
 ├── reset.html              # 密码重置请求页
 ├── reset-confirm.html      # 设置新密码页
 ├── shared.html             # 分享文件下载页（公开）
-├── setup.html              # 初始配置页
+├── account.html            # 账户设置页（修改密码/邮箱/注销）
 ├── .nojekyll               # 禁用 GitHub Pages Jekyll 处理
 ├── .github/workflows/
 │   └── send-email.yml      # 邮件发送 GitHub Action
@@ -110,7 +121,7 @@ github-netdisk/
 > **此项目为个人/演示用途设计，存在以下安全限制，请知悉：**
 
 1. **密码哈希存储**：密码使用 PBKDF2 (SHA-256, 100,000 次迭代) + 随机盐哈希后存储在 `data/users.json` 中。哈希不可逆，无法从存储数据还原原始密码。
-2. **Token 暴露**：GitHub Token 存储在浏览器 localStorage 中，可被客户端查看。建议使用 Fine-grained PAT 并仅授予目标仓库的 `Contents: Read and Write` 权限。
+2. **Token 暴露**：GitHub Token 直接写在 `js/config.js` 中，推送到 GitHub 仓库后可能被他人查看。建议使用 Fine-grained PAT 并仅授予目标仓库的 `Contents: Read and Write` 权限，或使用私有仓库托管。
 3. **API 速率限制**：GitHub API 有速率限制（认证用户 5000 次/小时），高并发场景可能触发限制。
 4. **无加密传输**：文件以 Base64 编码存储在仓库中，无额外加密。
 

@@ -59,6 +59,21 @@
       "resetToken": null,
       "resetTokenExpiry": null,
       "createdAt": "2026-08-28T07:30:04.070Z"
+    },
+    {
+      "id": "c940e119-b286-42c3-9dca-a36e1890ff2a",
+      "username": "B10112",
+      "email": "B10112@outlook.com",
+      "passwordHash": "25aa8734f76ce0fab662d66f044b1219e9d8556db588f03936f73817d200c2c6",
+      "salt": "220019ceb0c910d646e5bf76cf74f24c",
+      "role": "user",
+      "status": "active",
+      "verified": false,
+      "verificationCode": "217323",
+      "verificationCodeExpiry": "2026-08-28T07:41:54.119Z",
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-28T07:31:54.157Z"
     }
   ]
 }

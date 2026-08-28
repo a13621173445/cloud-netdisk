@@ -1,3 +1,19 @@
 {
-  "users": []
+  "users": [
+    {
+      "id": "f421949d-7075-42ba-9e81-7ccabf34206d",
+      "username": "a13621173445",
+      "email": "a13621173445@163.com",
+      "passwordHash": "ffb061b0efd61636a5331712ae2a4df9f959e3b8db2d86e77258cad90c6c1d62",
+      "salt": "08f8a8a854ca24a6f394a39693a5003f",
+      "role": "superadmin",
+      "status": "active",
+      "verified": true,
+      "verificationCode": null,
+      "verificationCodeExpiry": null,
+      "resetToken": null,
+      "resetTokenExpiry": null,
+      "createdAt": "2026-08-28T03:01:31.481Z"
+    }
+  ]
 }

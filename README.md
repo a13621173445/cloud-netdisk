@@ -25,10 +25,10 @@
 ├─────────────┼───────────────────────────────┤
 │             ▼                                │
 │  GitHub 仓库（存储层）                         │
-│  ├── data/users.json    用户数据             │
-│  ├── data/files.json    文件元数据            │
-│  ├── data/sessions.json 会话数据             │
-│  └── storage/           实际文件             │
+│  ├── netdisk/data/users.json    用户数据     │
+│  ├── netdisk/data/files.json    文件元数据    │
+│  ├── netdisk/data/sessions.json 会话数据      │
+│  └── netdisk/storage/           实际文件      │
 ├─────────────────────────────────────────────┤
 │  GitHub Actions（后端）                       │
 │  └── send-email.yml     邮件发送工作流        │
@@ -68,9 +68,9 @@
 
 ### 5. 初始化配置（修改 js 文件）
 
-本项目通过直接修改 `js/config.js` 文件完成初始化配置，无需访问配置页面。
+本项目通过直接修改 `netdisk/js/config.js` 文件完成初始化配置，无需访问配置页面。
 
-打开 `js/config.js`，修改以下字段：
+打开 `netdisk/js/config.js`，修改以下字段：
 
 ```js
 const CONFIG = {
@@ -91,37 +91,42 @@ const CONFIG = {
 
 ```
 github-netdisk/
-├── index.html              # 主页（文件管理仪表盘）
-├── login.html              # 登录页
-├── register.html           # 注册页
-├── verify.html             # 邮箱验证页
-├── reset.html              # 密码重置请求页
-├── reset-confirm.html      # 设置新密码页
-├── shared.html             # 分享文件下载页（公开）
-├── account.html            # 账户设置页（修改密码/邮箱/注销）
+├── index.html              # 主页（入口）
+├── netdisk/
+│   ├── index.html          # 文件管理仪表盘
+│   ├── login.html          # 登录页
+│   ├── register.html       # 注册页
+│   ├── verify.html         # 邮箱验证页
+│   ├── reset.html          # 密码重置请求页
+│   ├── reset-confirm.html  # 设置新密码页
+│   ├── shared.html         # 分享文件下载页（公开）
+│   ├── account.html        # 账户设置页（修改密码/邮箱/注销）
+│   ├── admin.html          # 管理后台
+│   ├── eula.html           # 用户协议
+│   ├── sponsor.html        # 赞助页
+│   ├── css/
+│   │   └── style.css       # 全局样式
+│   ├── js/
+│   │   ├── config.js       # 配置文件
+│   │   ├── github.js       # GitHub API 封装
+│   │   ├── netdisk.js      # 核心业务逻辑
+│   │   └── ui.js           # UI 工具函数
+│   ├── data/
+│   │   ├── users.json      # 用户数据（运行时自动管理）
+│   │   ├── files.json      # 文件元数据（运行时自动管理）
+│   │   └── sessions.json   # 会话数据（运行时自动管理）
+│   └── storage/            # 文件存储目录（运行时自动管理）
 ├── .nojekyll               # 禁用 GitHub Pages Jekyll 处理
 ├── .github/workflows/
 │   └── send-email.yml      # 邮件发送 GitHub Action
-├── css/
-│   └── style.css           # 全局样式
-├── js/
-│   ├── config.js           # 配置文件
-│   ├── github.js           # GitHub API 封装
-│   ├── netdisk.js          # 核心业务逻辑
-│   └── ui.js               # UI 工具函数
-├── data/
-│   ├── users.json          # 用户数据（运行时自动管理）
-│   ├── files.json          # 文件元数据（运行时自动管理）
-│   └── sessions.json       # 会话数据（运行时自动管理）
-└── storage/                # 文件存储目录（运行时自动管理）
 ```
 
 ## 安全说明
 
 > **此项目为个人/演示用途设计，存在以下安全限制，请知悉：**
 
-1. **密码哈希存储**：密码使用 PBKDF2 (SHA-256, 100,000 次迭代) + 随机盐哈希后存储在 `data/users.json` 中。哈希不可逆，无法从存储数据还原原始密码。
-2. **Token 暴露**：GitHub Token 直接写在 `js/config.js` 中，推送到 GitHub 仓库后可能被他人查看。建议使用 Fine-grained PAT 并仅授予目标仓库的 `Contents: Read and Write` 权限，或使用私有仓库托管。
+1. **密码哈希存储**：密码使用 PBKDF2 (SHA-256, 100,000 次迭代) + 随机盐哈希后存储在 `netdisk/data/users.json` 中。哈希不可逆，无法从存储数据还原原始密码。
+2. **Token 暴露**：GitHub Token 直接写在 `netdisk/js/config.js` 中，推送到 GitHub 仓库后可能被他人查看。建议使用 Fine-grained PAT 并仅授予目标仓库的 `Contents: Read and Write` 权限，或使用私有仓库托管。
 3. **API 速率限制**：GitHub API 有速率限制（认证用户 5000 次/小时），高并发场景可能触发限制。
 4. **无加密传输**：文件以 Base64 编码存储在仓库中，无额外加密。
 

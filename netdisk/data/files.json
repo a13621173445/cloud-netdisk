@@ -165,20 +165,6 @@
       "shareViewCount": 0,
       "shareDownloadCount": 0,
       "uploadedAt": "2026-08-28T07:31:46.833Z"
-    },
-    {
-      "id": "4a2bdeca-ce6b-40c1-b54e-52c78b14948f",
-      "name": "Steg-ui-chinese.py",
-      "size": 25064,
-      "type": "text/plain",
-      "path": "netdisk/storage/4a2bdeca-ce6b-40c1-b54e-52c78b14948f_Steg-ui-chinese.py",
-      "ownerId": "c940e119-b286-42c3-9dca-a36e1890ff2a",
-      "shared": false,
-      "shareToken": null,
-      "shareCreatedAt": "2026-08-28T08:27:50.494Z",
-      "shareViewCount": 0,
-      "shareDownloadCount": 0,
-      "uploadedAt": "2026-08-28T08:27:50.494Z"
     }
   ]
 }

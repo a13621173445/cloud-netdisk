@@ -846,7 +846,7 @@ const Netdisk = {
 
     // ============ 文件上传 ============
 
-    async uploadFile(file) {
+    async uploadFile(file, isGlobal = false) {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
 
@@ -872,6 +872,7 @@ const Netdisk = {
             ownerId: currentUser.id,
             shared: false,
             shareToken: null,
+            isGlobal: !!isGlobal,
             uploadedAt: new Date().toISOString()
         };
 
@@ -899,6 +900,29 @@ const Netdisk = {
         return files.filter(f => f.ownerId === currentUser.id);
     },
 
+    // ============ 获取全局分享文件列表 ============
+
+    async listGlobalFiles() {
+        const currentUser = this.getCurrentUserLocal();
+        if (!currentUser) throw new Error('请先登录');
+
+        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
+        const files = (data && data.files) || [];
+
+        // 获取用户名映射，用于展示上传者
+        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
+        const users = (usersData.data && usersData.data.users) || [];
+        const userMap = {};
+        users.forEach(u => { userMap[u.id] = u.username; });
+
+        return files
+            .filter(f => f.isGlobal === true)
+            .map(f => ({
+                ...f,
+                ownerName: userMap[f.ownerId] || '未知用户'
+            }));
+    },
+
     // ============ 下载文件 ============
 
     async downloadFile(fileId) {
@@ -907,7 +931,7 @@ const Netdisk = {
 
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
         const files = (data && data.files) || [];
-        const file = files.find(f => f.id === fileId && f.ownerId === currentUser.id);
+        const file = files.find(f => f.id === fileId && (f.ownerId === currentUser.id || f.isGlobal === true));
 
         if (!file) throw new Error('文件不存在或无权访问');
 

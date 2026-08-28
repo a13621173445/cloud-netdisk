@@ -19,7 +19,7 @@
 
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
-    <script src="js/netdisk.js?v=13"></script>
+    <script src="js/netdisk.js?v=15"></script>
     <script src="js/ui.js?v=8"></script>
     <script>
         (async () => {
@@ -59,7 +59,7 @@
                     <div class="share-file-meta" style="margin-top: 8px;">
                         访问 ${file.viewCount || 0} 次 · 下载 ${file.downloadCount || 0} 次 · 有效期 ${expireText}
                     </div>
-                    <a href="${UI.escapeHtml(file.url)}" class="btn btn-primary" style="margin-top: 24px;" download="${UI.escapeHtml(file.name)}" onclick="Netdisk.trackShareDownload('${token}')">
+                    <a href="${UI.escapeHtml(file.url)}" class="btn btn-primary" style="margin-top: 24px;" target="_blank" rel="noopener" onclick="Netdisk.trackShareDownload('${token}')">
                         下载文件
                     </a>
                 `;

@@ -409,12 +409,10 @@ const Netdisk = {
         const session = sessions.find(s => s.token === token);
 
         if (!session) {
-            this.logout();
             return null;
         }
 
         if (new Date(session.expiresAt) < new Date()) {
-            this.logout();
             return null;
         }
 
@@ -450,14 +448,12 @@ const Netdisk = {
         const user = users.find(u => u.id === session.userId);
 
         if (!user) {
-            this.logout();
             return null;
         }
 
         // 检查账户状态，冻结/注销状态强制登出，禁用状态保留登录
         const status = user.status || 'active';
         if (status === 'frozen' || status === 'deleted') {
-            this.logout();
             return null;
         }
 

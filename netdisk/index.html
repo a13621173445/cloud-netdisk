@@ -125,6 +125,13 @@
                     // 网络异常时使用本地缓存，不跳转
                 }
 
+                // 再次确认本地缓存未被服务端验证清除
+                const localUser = Netdisk.getCurrentUserLocal();
+                if (!localUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
                 // 显示用户信息
                 document.getElementById('user-name').textContent = this.currentUser.username;
                 document.getElementById('user-avatar').textContent = this.currentUser.username.charAt(0).toUpperCase();

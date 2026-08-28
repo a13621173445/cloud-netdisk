@@ -58,7 +58,7 @@
         // 检查配置
         (async () => {
             if (!(await CONFIG.isConfigured())) {
-                window.location.href = 'login.html';
+                document.getElementById('login-form').innerHTML = '<div class="alert alert-error" style="text-align:center;padding:40px;"><h3>系统未配置</h3><p style="margin-top:12px;color:var(--text-light);">请检查 config.js 中的 Token 配置是否正确。</p></div>';
                 return;
             }
 

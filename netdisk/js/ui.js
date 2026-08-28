@@ -228,6 +228,41 @@ const UI = {
         }).join('');
     },
 
+    // ============ 我的分享列表渲染 ============
+
+    renderShareList(shares, container) {
+        if (!shares || shares.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🔗</div>
+                    <p>暂无分享，回到「我的文件」点击分享按钮即可创建分享</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = shares.map(s => {
+            const expireText = s.shareExpireDays === -1 ? '永久有效' : `${s.shareExpireDays} 天`;
+            const downloadText = s.shareMaxDownloads === -1 ? '下载不限次' : `已下载 ${s.shareDownloadCount}/${s.shareMaxDownloads} 次`;
+            return `
+                <div class="file-card" data-id="${this.escapeHtml(s.id)}">
+                    <div class="file-icon">${this.getFileIcon(s.type, s.name)}</div>
+                    <div class="file-info">
+                        <div class="file-name" title="${this.escapeHtml(s.name)}">${this.escapeHtml(s.name)}</div>
+                        <div class="file-meta">${this.formatFileSize(s.size)} · ${expireText} · ${downloadText}</div>
+                        <div class="share-link-box">
+                            <input type="text" value="${this.escapeHtml(s.shareUrl)}" readonly onclick="this.select()">
+                            <button class="btn btn-primary btn-sm" onclick="App.copyShareInput(this)">复制</button>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="App.revokeShare('${this.escapeHtml(s.id)}')">取消分享</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
     // ============ 复制到剪贴板 ============
 
     async copyToClipboard(text) {

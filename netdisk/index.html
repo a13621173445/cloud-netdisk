@@ -34,6 +34,7 @@
         <!-- 视图切换 -->
         <div class="view-tabs">
             <button class="view-tab active" id="tab-mine" onclick="App.switchView('mine')">我的文件</button>
+            <button class="view-tab" id="tab-shares" onclick="App.switchView('shares')">我的分享</button>
             <button class="view-tab" id="tab-global" onclick="App.switchView('global')">公共分享区</button>
         </div>
 
@@ -92,8 +93,8 @@
 
     <script src="js/config.js?v=8"></script>
     <script src="js/github.js?v=6"></script>
-    <script src="js/netdisk.js?v=12"></script>
-    <script src="js/ui.js?v=17"></script>
+    <script src="js/netdisk.js?v=13"></script>
+    <script src="js/ui.js?v=18"></script>
     <script>
         const App = {
             currentUser: null,
@@ -167,11 +168,21 @@
             switchView(view) {
                 this.currentView = view;
                 const isGlobal = view === 'global';
-                document.getElementById('tab-mine').classList.toggle('active', !isGlobal);
+                const isShares = view === 'shares';
+                document.getElementById('tab-mine').classList.toggle('active', !isGlobal && !isShares);
+                document.getElementById('tab-shares').classList.toggle('active', isShares);
                 document.getElementById('tab-global').classList.toggle('active', isGlobal);
-                document.getElementById('page-title').textContent = isGlobal ? '公共分享区' : '我的文件';
-                document.getElementById('upload-btn').textContent = isGlobal ? '上传到公共区' : '上传文件';
-                document.getElementById('upload-hint').textContent = isGlobal ? '点击此处或拖拽文件到公共分享区上传（所有登录用户可见）' : '点击此处或拖拽文件到此处上传';
+
+                document.getElementById('upload-btn').style.display = isShares ? 'none' : '';
+                document.getElementById('upload-area').style.display = isShares ? 'none' : '';
+
+                if (isShares) {
+                    document.getElementById('page-title').textContent = '我的分享';
+                } else {
+                    document.getElementById('page-title').textContent = isGlobal ? '公共分享区' : '我的文件';
+                    document.getElementById('upload-btn').textContent = isGlobal ? '上传到公共区' : '上传文件';
+                    document.getElementById('upload-hint').textContent = isGlobal ? '点击此处或拖拽文件到公共分享区上传（所有登录用户可见）' : '点击此处或拖拽文件到此处上传';
+                }
                 this.loadFiles();
             },
 
@@ -247,6 +258,9 @@
                     if (this.currentView === 'global') {
                         const files = await Netdisk.listGlobalFiles();
                         UI.renderGlobalFileList(files, fileListEl, this.currentUser ? this.currentUser.id : null);
+                    } else if (this.currentView === 'shares') {
+                        const shares = await Netdisk.listMyShares();
+                        UI.renderShareList(shares, fileListEl);
                     } else {
                         const files = await Netdisk.listFiles();
                         UI.renderFileList(files, fileListEl);
@@ -321,6 +335,27 @@
                     await Netdisk.deleteFile(fileId);
                     UI.hideLoading();
                     UI.showMessage('文件已删除', 'success');
+                    await this.loadFiles();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showMessage(error.message, 'error');
+                }
+            },
+
+            copyShareInput(btn) {
+                const input = btn.parentElement.querySelector('input');
+                if (input) UI.copyToClipboard(input.value);
+            },
+
+            async revokeShare(fileId) {
+                const confirmed = await UI.confirm('确定要取消该文件的分享吗？取消后分享链接将立即失效。', '取消分享', '确定', '取消');
+                if (!confirmed) return;
+
+                try {
+                    UI.showLoading('取消中...');
+                    await Netdisk.revokeShare(fileId);
+                    UI.hideLoading();
+                    UI.showMessage('分享已取消', 'success');
                     await this.loadFiles();
                 } catch (error) {
                     UI.hideLoading();

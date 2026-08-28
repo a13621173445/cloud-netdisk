@@ -1,3 +1,15 @@
 {
-  "files": []
+  "files": [
+    {
+      "id": "3f77fe6a-1e1e-45ca-aa38-ad47dab696cf",
+      "name": "1080【官方投稿】メズマライザー _ 初音ミク・重音テトSV.mp4",
+      "size": 39909873,
+      "type": "video/mp4",
+      "path": "netdisk/storage/3f77fe6a-1e1e-45ca-aa38-ad47dab696cf_1080_________________________SV.mp4",
+      "ownerId": "680ee0b9-48d0-4afd-b632-1159dfb33dab",
+      "shared": false,
+      "shareToken": null,
+      "uploadedAt": "2026-08-28T02:57:33.613Z"
+    }
+  ]
 }

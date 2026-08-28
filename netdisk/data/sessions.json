@@ -1,3 +1,13 @@
 {
-  "sessions": []
+  "sessions": [
+    {
+      "token": "51d771b62a15155a72cac74a735e4723d099eeb3f30dcef229aa8e6ebb98471d",
+      "userId": "f421949d-7075-42ba-9e81-7ccabf34206d",
+      "createdAt": "2026-08-28T03:42:27.931Z",
+      "expiresAt": "2026-09-27T03:42:27.931Z",
+      "rememberMe": true,
+      "ip": "103.151.172.13",
+      "lastLoginDate": "2026-08-28"
+    }
+  ]
 }

@@ -160,57 +160,40 @@ const Netdisk = {
         return code;
     },
 
-    // ============ 邮箱验证 ============
+    // ============ 邮箱验证（验证码） ============
 
-    async verifyEmail(code) {
+    async verifyEmail(email, code) {
+        if (!email) throw new Error('请输入邮箱地址');
         if (!code) throw new Error('请输入验证码');
 
-        let verifiedUser = null;
+        const response = await fetch(`${CONFIG.getApiBase()}/api/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '验证失败');
+        }
 
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.verificationCode === code);
-                if (!user) throw new Error('验证码无效');
-                if (user.verified) throw new Error('邮箱已验证，无需重复操作');
-                // 检查验证码是否过期
-                if (user.verificationCodeExpiry && new Date(user.verificationCodeExpiry) < new Date()) {
-                    throw new Error('验证码已过期，请重新获取');
-                }
-                user.verified = true;
-                user.verificationCode = null;
-                user.verificationCodeExpiry = null;
-                verifiedUser = user;
-                return data;
-            },
-            '邮箱验证完成'
-        );
-
-        return { success: true, message: '邮箱验证成功！现在可以登录了。' };
+        return { success: true, message: result.message };
     },
 
     // 重新发送验证码
     async resendVerificationCode(email) {
         if (!email) throw new Error('请输入邮箱地址');
 
-        const code = generateVerificationCode();
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.email === email);
-                if (!user) throw new Error('该邮箱未注册');
-                if (user.verified) throw new Error('邮箱已验证');
-                user.verificationCode = code;
-                user.verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-                return data;
-            },
-            '重新发送验证码'
-        );
+        const response = await fetch(`${CONFIG.getApiBase()}/api/resend-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '发送失败');
+        }
 
-        await this.sendVerificationCode(email, code, '验证你的邮箱');
-        return { success: true, message: '验证码已重新发送' };
+        return { success: true, message: result.message };
     },
 
     // ============ 用户登录 ============

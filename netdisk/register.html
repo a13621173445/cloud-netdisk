@@ -109,6 +109,7 @@
 
         // 验证邮箱
         document.getElementById('verify-btn').addEventListener('click', async () => {
+            const email = document.getElementById('email').value.trim();
             const code = document.getElementById('verify-code').value.trim();
             if (!code) {
                 UI.showMessage('请输入验证码', 'warning');
@@ -121,7 +122,7 @@
 
             try {
                 UI.showLoading('验证中...');
-                const result = await Netdisk.verifyEmail(code);
+                const result = await Netdisk.verifyEmail(email, code);
                 UI.hideLoading();
                 UI.showMessage(result.message, 'success');
                 document.querySelector('.auth-card').innerHTML = `

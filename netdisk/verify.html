@@ -61,7 +61,7 @@
 
             try {
                 UI.showLoading('验证中...');
-                const result = await Netdisk.verifyEmail(code);
+                const result = await Netdisk.verifyEmail(email, code);
                 UI.hideLoading();
                 UI.showMessage(result.message, 'success');
                 document.querySelector('.auth-card').innerHTML = `

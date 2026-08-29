@@ -8,7 +8,7 @@ Cloud Netdisk 是一个基于 GitHub + Cloudflare 的网盘系统。用户数据
 
 ```
 frpz.cc (Cloudflare NS)
-    └── Cloudflare Pages (github-netdisk)
+    └── Cloudflare Pages (cloud-netdisk)
         ├── 静态页面: /netdisk/*.html
         ├── Pages Functions: /api/* (认证 + 管理员 API)
         └── D1 数据库: netdisk-db (用户/会话)
@@ -17,7 +17,7 @@ frpz.cc (Cloudflare NS)
 ## 目录结构
 
 ```
-github-netdisk/
+cloud-netdisk/
 ├── index.html                    # 首页
 ├── functions/
 │   └── api/
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 ### 4. 创建 Cloudflare Pages 项目
 
 1. 进入 **Workers & Pages** → **Create** → **Pages**
-2. 选择 **Connect to Git**，连接 GitHub 仓库 `a13621173445/github-netdisk`
+2. 选择 **Connect to Git**，连接 GitHub 仓库 `a13621173445/cloud-netdisk`
 3. 配置构建：
    - **Framework preset**: None
    - **Build command**: `mkdir -p dist/netdisk && cp index.html dist/ && cp -r netdisk/css netdisk/js netdisk/img dist/netdisk/ && cp netdisk/*.html dist/netdisk/`
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 1. 进入 Pages 项目 → **Custom domains**
 2. 点击 **Set up a custom domain**
 3. 输入 `frpz.cc`
-4. Cloudflare 会自动创建 CNAME 记录指向 `github-netdisk.pages.dev`
+4. Cloudflare 会自动创建 CNAME 记录指向 `cloud-netdisk.pages.dev`
 
 ### 7. 配置 GitHub Secrets（邮件发送）
 
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 ```javascript
 const CONFIG = {
     GITHUB_OWNER: 'a13621173445',        // GitHub 用户名
-    REPO_NAME: 'github-netdisk',          // 仓库名
+    REPO_NAME: 'cloud-netdisk',          // 仓库名
     BRANCH: 'main',                       // 分支
     PAGES_BASE_URL: 'https://frpz.cc/netdisk',  // 页面基础 URL
     TOKEN_KEY: '...',                     // GitHub Token AES 加密 KEY

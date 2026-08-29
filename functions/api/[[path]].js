@@ -17,6 +17,11 @@ function generateToken() {
     return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// 生成 6 位数字验证码
+function generateVerificationCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 function hexToBytes(hex) {
     const bytes = new Uint8Array(hex.length / 2);
     for (let i = 0; i < hex.length; i += 2) {
@@ -129,6 +134,8 @@ export async function onRequest(context) {
                 return await handleMe(request, env);
             case 'verify':
                 return await handleVerify(request, env);
+            case 'resend-code':
+                return await handleResendCode(request, env);
             // ===== 管理员端点 =====
             case 'admin-users':
                 return await handleAdminUsers(request, env);
@@ -184,14 +191,24 @@ async function handleRegister(request, env) {
     const passwordHash = await hashPassword(password, salt);
     const id = generateId();
     const createdAt = new Date().toISOString();
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     await env.DB.prepare(
-        'INSERT INTO users (id, username, email, password_hash, salt, role, status, verified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, username.trim(), email.trim(), passwordHash, salt, 'user', 'active', 0, createdAt).run();
+        'INSERT INTO users (id, username, email, password_hash, salt, role, status, verified, created_at, verification_code, verification_code_expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(id, username.trim(), email.trim(), passwordHash, salt, 'user', 'active', 0, createdAt, verificationCode, verificationCodeExpiry).run();
+
+    // 发送验证码邮件
+    try {
+        await sendVerificationEmail(env, email, verificationCode);
+    } catch (e) {
+        // 邮件发送失败不影响注册，但用户无法验证
+        console.error('验证码邮件发送失败:', e);
+    }
 
     return json({
         success: true,
-        message: '注册成功！',
+        message: '注册成功！验证码已发送到你的邮箱。',
         user: { id, username: username.trim(), email: email.trim(), verified: false }
     });
 }
@@ -318,9 +335,49 @@ async function handleMe(request, env) {
     });
 }
 
-// ============ 邮箱验证 ============
+// ============ 邮箱验证（验证码） ============
 
 async function handleVerify(request, env) {
+    const body = await request.json();
+    const { email, code } = body;
+
+    if (!email) {
+        return json({ error: '请输入邮箱地址' }, 400);
+    }
+    if (!code) {
+        return json({ error: '请输入验证码' }, 400);
+    }
+
+    const user = await env.DB.prepare(
+        'SELECT * FROM users WHERE email = ?'
+    ).bind(email).first();
+
+    if (!user) {
+        return json({ error: '该邮箱未注册' }, 404);
+    }
+
+    if (user.verified) {
+        return json({ error: '邮箱已验证，无需重复操作' }, 400);
+    }
+
+    if (!user.verification_code || user.verification_code !== code) {
+        return json({ error: '验证码无效' }, 400);
+    }
+
+    if (user.verification_code_expiry && new Date(user.verification_code_expiry) < new Date()) {
+        return json({ error: '验证码已过期，请重新获取' }, 400);
+    }
+
+    await env.DB.prepare(
+        'UPDATE users SET verified = 1, verification_code = NULL, verification_code_expiry = NULL WHERE id = ?'
+    ).bind(user.id).run();
+
+    return json({ success: true, message: '邮箱验证成功！现在可以登录了。' });
+}
+
+// ============ 重新发送验证码 ============
+
+async function handleResendCode(request, env) {
     const body = await request.json();
     const { email } = body;
 
@@ -329,18 +386,72 @@ async function handleVerify(request, env) {
     }
 
     const user = await env.DB.prepare(
-        'SELECT id FROM users WHERE email = ?'
+        'SELECT * FROM users WHERE email = ?'
     ).bind(email).first();
 
     if (!user) {
         return json({ error: '该邮箱未注册' }, 404);
     }
 
-    await env.DB.prepare(
-        'UPDATE users SET verified = 1 WHERE id = ?'
-    ).bind(user.id).run();
+    if (user.verified) {
+        return json({ error: '邮箱已验证' }, 400);
+    }
 
-    return json({ success: true, message: '邮箱验证成功！' });
+    const code = generateVerificationCode();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    await env.DB.prepare(
+        'UPDATE users SET verification_code = ?, verification_code_expiry = ? WHERE id = ?'
+    ).bind(code, expiry, user.id).run();
+
+    // 发送验证码邮件
+    try {
+        await sendVerificationEmail(env, email, code);
+    } catch (e) {
+        console.error('验证码邮件发送失败:', e);
+    }
+
+    return json({ success: true, message: '验证码已重新发送' });
+}
+
+// ============ 发送验证码邮件 ============
+
+async function sendVerificationEmail(env, email, code) {
+    const body = `验证你的邮箱
+
+你的验证码是：${code}
+
+验证码 10 分钟内有效，请勿泄露给他人。
+
+此邮件由系统自动发送，请勿回复。`;
+
+    // 通过 GitHub Actions 发送邮件
+    const owner = 'a13621173445';
+    const repo = 'cloud-netdisk';
+    const token = env.GITHUB_TOKEN;
+    if (!token) {
+        throw new Error('GitHub Token 未配置');
+    }
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/dispatches`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            event_type: 'send-email',
+            client_payload: {
+                to: email,
+                subject: '验证你的邮箱 - Cloud Netdisk',
+                body: body
+            }
+        })
+    });
+
+    if (!response.ok && response.status !== 204) {
+        throw new Error('邮件发送失败');
+    }
 }
 
 // ============ 管理员：列出所有用户 ============

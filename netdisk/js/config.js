@@ -30,7 +30,7 @@
 const CONFIG = {
     // ============ 基础配置（部署时修改） ============
     GITHUB_OWNER: 'a13621173445',
-    REPO_NAME: 'github-netdisk',
+    REPO_NAME: 'cloud-netdisk',
     BRANCH: 'main',
 
     // GitHub Pages 地址（用于生成验证链接、分享链接等）

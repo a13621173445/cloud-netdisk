@@ -79,7 +79,7 @@
 ```js
 const CONFIG = {
     GITHUB_OWNER: '你的GitHub用户名',            // 改为你的 GitHub 用户名
-    REPO_NAME: 'github-netdisk',                 // 改为你的仓库名
+    REPO_NAME: 'cloud-netdisk',                 // 改为你的仓库名
     PAGES_BASE_URL: 'https://你的域名/netdisk',   // 改为你的 Pages 地址
     TOKEN_KEY: '...',   // 你的 Token 的 AES 密钥（Base64）
     TOKEN_IV: '...',    // 你的 Token 的 AES 初始化向量（Base64）
@@ -115,7 +115,7 @@ encryptToken('你的GitHubToken').then(console.log);
 ## 项目结构
 
 ```
-github-netdisk/
+cloud-netdisk/
 ├── index.html              # 入口页（跳转到 netdisk/）
 ├── LICENSE                 # AGPL-3.0 许可证
 ├── README.md               # 说明文档

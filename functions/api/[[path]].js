@@ -547,6 +547,7 @@ async function handleAdminSetRole(request, env) {
     const { userId, makeAdmin } = body;
 
     if (!userId) return json({ error: '缺少用户 ID' }, 400);
+    if (typeof makeAdmin !== 'boolean') return json({ error: '参数错误' }, 400);
     if (user.id === userId) return json({ error: '不能修改自己的管理员角色' }, 400);
 
     const target = await env.DB.prepare(
@@ -573,6 +574,8 @@ async function handleAdminSetStatus(request, env) {
     const { userId, status, reason } = body;
 
     if (!userId || !status) return json({ error: '缺少必要参数' }, 400);
+    const validStatuses = ['active', 'disabled', 'frozen'];
+    if (!validStatuses.includes(status)) return json({ error: '无效的状态值' }, 400);
     if (user.id === userId) return json({ error: '不能操作自己的账户' }, 400);
 
     const target = await env.DB.prepare(
@@ -632,6 +635,7 @@ async function handleAdminHandleUnfreeze(request, env) {
     const { userId, approve } = body;
 
     if (!userId) return json({ error: '缺少用户 ID' }, 400);
+    if (typeof approve !== 'boolean') return json({ error: '参数错误' }, 400);
 
     const target = await env.DB.prepare(
         'SELECT id, username, email, role, status FROM users WHERE id = ?'

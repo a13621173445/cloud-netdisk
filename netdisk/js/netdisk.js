@@ -674,55 +674,35 @@ const Netdisk = {
 
     async adminListUnfreezeRequests() {
         this.requireAdmin();
-        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (data && data.users) || [];
-        return users
-            .filter(u => u.unfreezeRequested)
-            .map(u => ({
-                id: u.id,
-                username: u.username,
-                email: u.email,
-                status: u.status || 'active',
-                role: u.role || 'user',
-                unfreezeRequestedAt: u.unfreezeRequestedAt,
-                statusReason: u.statusReason || '',
-                unfreezeReason: u.unfreezeReason || ''
-            }));
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-unfreeze-requests`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '获取解冻申请失败');
+        }
+        return result.requests || [];
     },
 
     // 管理员：处理解冻申请（解冻或拒绝）
     async adminHandleUnfreezeRequest(userId, approve) {
         this.requireAdmin();
-        const currentUser = this.getCurrentUserLocal();
-        const currentRole = currentUser.role || 'user';
-
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.id === userId);
-                if (!user) throw new Error('用户不存在');
-                const targetRole = user.role || 'user';
-
-                // 超级管理员永不被操作
-                if (targetRole === 'superadmin') throw new Error('不能操作超级管理员账户');
-                // 管理员不能操作管理员，只能操作普通用户
-                if (currentRole === 'admin' && targetRole !== 'user') throw new Error('不能操作管理员账户');
-
-                if (approve) {
-                    user.status = 'active';
-                    user.statusReason = '';
-                    user.statusUpdatedAt = new Date().toISOString();
-                    user.statusUpdatedBy = currentUser.username;
-                }
-                user.unfreezeRequested = false;
-                user.unfreezeRequestedAt = null;
-                return data;
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-handle-unfreeze`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            approve ? '批准解冻申请' : '拒绝解冻申请'
-        );
+            body: JSON.stringify({ userId, approve })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '操作失败');
+        }
 
-        return { success: true, message: approve ? '已批准解冻' : '已拒绝解冻申请' };
+        return { success: true, message: result.message };
     },
 
     // ============ 文件上传 ============
@@ -1182,22 +1162,21 @@ const Netdisk = {
             throw new Error('不能修改自己的管理员角色');
         }
 
-        let updatedUser = null;
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.id === userId);
-                if (!user) throw new Error('用户不存在');
-                if (user.role === 'superadmin') throw new Error('不能修改超级管理员的角色');
-                user.role = makeAdmin ? 'admin' : 'user';
-                updatedUser = user;
-                return data;
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-set-role`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            makeAdmin ? '设置管理员' : '取消管理员'
-        );
+            body: JSON.stringify({ userId, makeAdmin })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '操作失败');
+        }
 
-        return { success: true, message: makeAdmin ? '已设置为管理员' : '已取消管理员', user: updatedUser };
+        return { success: true, message: result.message };
     },
 
     // 创建管理员账户（仅当系统中还没有管理员时可用）
@@ -1250,107 +1229,57 @@ const Netdisk = {
     // 查看所有用户（管理员）
     async adminListUsers() {
         this.requireAdmin();
-        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (data && data.users) || [];
-        return users.map(u => ({
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            role: u.role || 'user',
-            status: u.status || 'active',
-            verified: u.verified,
-            createdAt: u.createdAt
-        }));
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '获取用户列表失败');
+        }
+        return result.users || [];
     },
 
     // 查看所有文件（管理员）
     async adminListFiles() {
         this.requireAdmin();
-        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
-        const files = (data && data.files) || [];
-        // 获取用户名映射
-        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData.data && usersData.data.users) || [];
-        const userMap = {};
-        users.forEach(u => userMap[u.id] = u.username);
-
-        return files.map(f => ({
-            id: f.id,
-            name: f.name,
-            size: f.size,
-            type: f.type,
-            ownerId: f.ownerId,
-            ownerName: userMap[f.ownerId] || '未知用户',
-            shared: f.shared,
-            isGlobal: f.isGlobal === true,
-            status: f.status || 'normal',   // normal / taken_down
-            uploadedAt: f.uploadedAt
-        }));
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-files`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '获取文件列表失败');
+        }
+        return result.files || [];
     },
 
     // 按用户分组的文件统计（管理员）
     async adminListFilesGroupedByUser() {
         this.requireAdmin();
-        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData && usersData.users) || [];
-        const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
-        const files = (filesData && filesData.files) || [];
-
-        const groups = users.map(u => {
-            const userFiles = files.filter(f => f.ownerId === u.id && !f.isGlobal);
-            return {
-                userId: u.id,
-                username: u.username,
-                fileCount: userFiles.length,
-                files: userFiles.map(f => ({
-                    id: f.id,
-                    name: f.name,
-                    size: f.size,
-                    type: f.type,
-                    isGlobal: f.isGlobal === true,
-                    status: f.status || 'normal',
-                    uploadedAt: f.uploadedAt
-                }))
-            };
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-files-grouped`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-
-        // 排序：有文件的按用户名拼音升序在前，无文件的按拼音升序沉底
-        groups.sort((a, b) => {
-            const aEmpty = a.fileCount === 0;
-            const bEmpty = b.fileCount === 0;
-            if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
-            return a.username.localeCompare(b.username, 'zh-CN');
-        });
-
-        return groups;
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '获取文件分组失败');
+        }
+        return result.groups || [];
     },
 
     // 查看所有公共文件（管理员）
     async adminListPublicFiles() {
         this.requireAdmin();
-        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
-        const files = (data && data.files) || [];
-
-        // 获取用户名映射
-        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData.data && usersData.data.users) || [];
-        const userMap = {};
-        users.forEach(u => { userMap[u.id] = u.username; });
-
-        return files
-            .filter(f => f.isGlobal === true)
-            .map(f => ({
-                id: f.id,
-                name: f.name,
-                size: f.size,
-                type: f.type,
-                ownerName: userMap[f.ownerId] || '未知用户',
-                shareCreatedAt: f.shareCreatedAt || f.uploadedAt,
-                shareViewCount: f.shareViewCount || 0,
-                shareDownloadCount: f.shareDownloadCount || 0,
-                status: f.status || 'normal',
-                uploadedAt: f.uploadedAt
-            }));
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-public-files`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '获取公共文件失败');
+        }
+        return result.files || [];
     },
 
     // 下架文件（管理员） - 取消分享并标记为下架
@@ -1457,33 +1386,22 @@ const Netdisk = {
         this.requireAdmin();
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error('不能操作自己的账户');
-        const currentRole = currentUser.role || 'user';
 
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.id === userId);
-                if (!user) throw new Error('用户不存在');
-                const targetRole = user.role || 'user';
-
-                // 超级管理员永不被操作
-                if (targetRole === 'superadmin') throw new Error('不能操作超级管理员账户');
-                // 管理员不能操作管理员
-                if (currentRole === 'admin' && targetRole !== 'user') throw new Error('不能操作管理员账户');
-                // 普通用户无操作权限
-                if (currentRole !== 'admin' && currentRole !== 'superadmin') throw new Error('无操作权限');
-
-                user.status = 'active';
-                user.statusReason = '';
-                user.statusUpdatedAt = new Date().toISOString();
-                user.statusUpdatedBy = currentUser.username;
-                return data;
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-set-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            `管理员恢复用户: ${userId}`
-        );
+            body: JSON.stringify({ userId, status: 'active', reason: '' })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '操作失败');
+        }
 
-        return { success: true, message: '用户已恢复为正常状态' };
+        return { success: true, message: result.message };
     },
 
     // 注销用户（管理员） - 删除账户及所有文件
@@ -1491,113 +1409,41 @@ const Netdisk = {
         this.requireAdmin();
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error('不能注销自己的账户');
-        const currentRole = currentUser.role || 'user';
 
-        // 权限检查：先读取目标用户角色
-        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const allUsers = (usersData && usersData.users) || [];
-        const targetUser = allUsers.find(u => u.id === userId);
-        if (!targetUser) throw new Error('用户不存在');
-        const targetRole = targetUser.role || 'user';
-
-        // 超级管理员永不被注销
-        if (targetRole === 'superadmin') throw new Error('不能注销超级管理员账户');
-        // 管理员不能注销管理员和超级管理员，只能注销普通用户
-        if (currentRole === 'admin' && targetRole !== 'user') throw new Error('不能注销管理员账户');
-        // 普通用户无操作权限
-        if (currentRole !== 'admin' && currentRole !== 'superadmin') throw new Error('无操作权限');
-
-        // 删除该用户的所有文件
-        const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
-        const files = (filesData && filesData.files) || [];
-        const userFiles = files.filter(f => f.ownerId === userId);
-
-        for (const file of userFiles) {
-            try {
-                const fileInfo = await GitHubAPI.getContent(file.path);
-                if (fileInfo) {
-                    await GitHubAPI.deleteFile(file.path, `注销用户删除文件: ${file.name}`, fileInfo.sha);
-                }
-            } catch (e) {
-                // 忽略单个文件删除失败
-            }
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-delete-user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ userId })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '操作失败');
         }
 
-        // 删除用户文件元数据
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.FILES,
-            (data) => {
-                if (!data.files) data.files = [];
-                data.files = data.files.filter(f => f.ownerId !== userId);
-                return data;
-            },
-            `注销用户删除文件元数据`
-        );
-
-        // 删除用户会话
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.SESSIONS,
-            (data) => {
-                if (!data.sessions) data.sessions = [];
-                data.sessions = data.sessions.filter(s => s.userId !== userId);
-                return data;
-            },
-            `注销用户删除会话`
-        );
-
-        // 删除用户账户
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                data.users = data.users.filter(u => u.id !== userId);
-                return data;
-            },
-            `注销用户账户`
-        );
-
-        return { success: true, message: '用户已注销，账户及所有文件已删除' };
+        return { success: true, message: result.message };
     },
 
     // 内部工具：设置用户状态
     async _setUserStatus(userId, status, label, reason = '') {
         const currentUser = this.getCurrentUserLocal();
         if (currentUser.id === userId) throw new Error(`不能${label}自己的账户`);
-        const currentRole = currentUser.role || 'user';
 
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.id === userId);
-                if (!user) throw new Error('用户不存在');
-                const targetRole = user.role || 'user';
-
-                // 超级管理员永不被操作
-                if (targetRole === 'superadmin') throw new Error(`不能${label}超级管理员账户`);
-                // 管理员不能操作管理员和超级管理员，只能操作普通用户
-                if (currentRole === 'admin' && targetRole !== 'user') throw new Error(`不能${label}管理员账户`);
-                // 普通用户无操作权限
-                if (currentRole !== 'admin' && currentRole !== 'superadmin') throw new Error('无操作权限');
-
-                user.status = status;
-                user.statusReason = reason || '';
-                user.statusUpdatedAt = new Date().toISOString();
-                user.statusUpdatedBy = currentUser.username;
-                return data;
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/admin-set-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            `管理员${label}用户: ${userId}`
-        );
-
-        // 清除该用户的所有会话
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.SESSIONS,
-            (data) => {
-                if (!data.sessions) data.sessions = [];
-                data.sessions = data.sessions.filter(s => s.userId !== userId);
-                return data;
-            },
-            `管理员${label}用户清除会话`
-        );
+            body: JSON.stringify({ userId, status, reason })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '操作失败');
+        }
     }
 };

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cloud Netdisk - Cloudflare Pages Functions 通配路由
  * 处理 /api/* 的所有认证请求，数据存储在 D1 数据库
  * Copyright (C) 2026 a13621173445
@@ -88,7 +88,7 @@ async function getCurrentUser(request, env) {
     if (new Date(session.expires_at) < new Date()) return null;
 
     const user = await env.DB.prepare(
-        'SELECT * FROM users WHERE id = ?'
+        'SELECT id, username, email, role, status FROM users WHERE id = ?'
     ).bind(session.user_id).first();
 
     if (!user) return null;
@@ -224,7 +224,7 @@ async function handleLogin(request, env) {
     }
 
     const user = await env.DB.prepare(
-        'SELECT * FROM users WHERE email = ?'
+        'SELECT id, username, email, password_hash, salt, role, status, verified FROM users WHERE email = ?'
     ).bind(email).first();
 
     if (!user) {
@@ -349,7 +349,7 @@ async function handleVerify(request, env) {
     }
 
     const user = await env.DB.prepare(
-        'SELECT * FROM users WHERE email = ?'
+        'SELECT id, email, verified, verification_code, verification_code_expiry FROM users WHERE email = ?'
     ).bind(email).first();
 
     if (!user) {
@@ -386,7 +386,7 @@ async function handleResendCode(request, env) {
     }
 
     const user = await env.DB.prepare(
-        'SELECT * FROM users WHERE email = ?'
+        'SELECT id, email, verified FROM users WHERE email = ?'
     ).bind(email).first();
 
     if (!user) {
@@ -550,7 +550,7 @@ async function handleAdminSetRole(request, env) {
     if (user.id === userId) return json({ error: '不能修改自己的管理员角色' }, 400);
 
     const target = await env.DB.prepare(
-        'SELECT * FROM users WHERE id = ?'
+        'SELECT id, username, email, role, status FROM users WHERE id = ?'
     ).bind(userId).first();
 
     if (!target) return json({ error: '用户不存在' }, 404);
@@ -576,7 +576,7 @@ async function handleAdminSetStatus(request, env) {
     if (user.id === userId) return json({ error: '不能操作自己的账户' }, 400);
 
     const target = await env.DB.prepare(
-        'SELECT * FROM users WHERE id = ?'
+        'SELECT id, username, email, role, status FROM users WHERE id = ?'
     ).bind(userId).first();
 
     if (!target) return json({ error: '用户不存在' }, 404);
@@ -606,7 +606,7 @@ async function handleAdminDeleteUser(request, env) {
     if (user.id === userId) return json({ error: '不能注销自己的账户' }, 400);
 
     const target = await env.DB.prepare(
-        'SELECT * FROM users WHERE id = ?'
+        'SELECT id, username, email, role, status FROM users WHERE id = ?'
     ).bind(userId).first();
 
     if (!target) return json({ error: '用户不存在' }, 404);
@@ -634,7 +634,7 @@ async function handleAdminHandleUnfreeze(request, env) {
     if (!userId) return json({ error: '缺少用户 ID' }, 400);
 
     const target = await env.DB.prepare(
-        'SELECT * FROM users WHERE id = ?'
+        'SELECT id, username, email, role, status FROM users WHERE id = ?'
     ).bind(userId).first();
 
     if (!target) return json({ error: '用户不存在' }, 404);

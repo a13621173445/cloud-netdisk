@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -10,8 +10,8 @@
     <!-- 导航栏 -->
     <nav class="navbar">
         <div class="container">
-            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
-            <a href="sponsor.html" class="navbar-sponsor" target="_blank" title="赞助支持">赞助</a>
+            <a href="index" class="navbar-brand">GitHub Netdisk</a>
+            <a href="sponsor" class="navbar-sponsor" target="_blank" title="赞助支持">赞助</a>
             <div class="navbar-right">
                 <div class="user-info">
                     <div class="user-avatar" id="user-avatar">U</div>
@@ -109,13 +109,13 @@
             async init() {
                 // 检查 EULA 协议
                 if (!localStorage.getItem('netdisk_eula_agreed')) {
-                    window.location.href = 'eula.html';
+                    window.location.href = 'eula';
                     return;
                 }
 
                 // 检查配置
                 if (!(await CONFIG.isConfigured())) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'login';
                     return;
                 }
 
@@ -123,7 +123,7 @@
                 this.currentUser = Netdisk.getCurrentUserLocal();
                 if (!this.currentUser) {
                     Netdisk.logout();
-                    window.location.href = 'login.html';
+                    window.location.href = 'login';
                     return;
                 }
 
@@ -135,7 +135,7 @@
                         this.currentUser = serverUser;
                     } else {
                         Netdisk.logout();
-                        window.location.href = 'login.html';
+                    window.location.href = 'login';
                         return;
                     }
                 } catch (e) {
@@ -201,8 +201,8 @@
                         <p style="margin:8px 0;color:var(--text-light);">你的账户已被禁用，无法进行文件相关操作。</p>
                         <p style="margin:8px 0;color:var(--text-light);">如需解禁，请前往账户设置提交解禁申请。</p>
                         <div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">
-                            <a href="account.html" class="btn btn-primary">前往账户设置</a>
-                            <button class="btn btn-secondary" onclick="Netdisk.logout().then(() => window.location.href='login.html')">退出登录</button>
+                            <a href="account" class="btn btn-primary">前往账户设置</a>
+                            <button class="btn btn-secondary" onclick="Netdisk.logout().then(() => window.location.href='index')">退出登录</button>
                         </div>
                     </div>
                 `;
@@ -389,17 +389,17 @@
                 // 退出登录
                 document.getElementById('logout-btn').addEventListener('click', async () => {
                     await Netdisk.logout();
-                    window.location.href = 'login.html';
+                    window.location.href = 'login';
                 });
 
                 // 管理后台
                 document.getElementById('admin-btn').addEventListener('click', () => {
-                    window.location.href = 'admin.html';
+                    window.location.href = 'admin';
                 });
 
                 // 用户管理
                 document.getElementById('account-btn').addEventListener('click', () => {
-                    window.location.href = 'account.html';
+                    window.location.href = 'account';
                 });
 
                 // 上传按钮

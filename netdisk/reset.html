@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -30,7 +30,7 @@
             </div>
 
             <div class="mt-24 text-center">
-                <a href="login.html" class="link">返回登录</a>
+                <a href="login" class="link">返回登录</a>
             </div>
         </div>
     </div>
@@ -42,7 +42,7 @@
     <script>
         (async () => {
             if (!(await CONFIG.isConfigured())) {
-                window.location.href = 'login.html';
+                window.location.href = 'login';
                 return;
             }
         })();

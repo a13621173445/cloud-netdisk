@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GitHub Netdisk
  * Copyright (C) 2026 a13621173445
  *
@@ -150,13 +150,13 @@ const UI = {
 
     async checkAuth() {
         if (!(await CONFIG.isConfigured())) {
-            window.location.href = 'login.html';
+            window.location.href = 'login';
             return false;
         }
 
         const user = await Netdisk.getCurrentUser();
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.href = 'login';
             return false;
         }
         return true;
@@ -165,7 +165,7 @@ const UI = {
     checkAuthSync() {
         const user = Netdisk.getCurrentUserLocal();
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.href = 'login';
             return null;
         }
         return user;
@@ -173,7 +173,7 @@ const UI = {
 
     async checkConfig() {
         if (!(await CONFIG.isConfigured())) {
-            window.location.href = 'login.html';
+            window.location.href = 'login';
             return false;
         }
         return true;

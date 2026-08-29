@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GitHub Netdisk
  * Copyright (C) 2026 a13621173445
  *
@@ -373,7 +373,7 @@ const Netdisk = {
         );
 
         // 发送重置邮件
-        const resetUrl = `${CONFIG.getPagesUrl()}/reset-confirm.html?token=${resetToken}`;
+        const resetUrl = `${CONFIG.getPagesUrl()}/reset-confirm?token=${resetToken}`;
         const body = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #4F46E5;">重置你的密码</h2>
@@ -830,7 +830,7 @@ const Netdisk = {
                 type: f.type,
                 ownerName: userMap[f.ownerId] || '未知用户',
                 shareToken: f.shareToken,
-                shareUrl: `${CONFIG.getPagesUrl()}/shared.html?token=${f.shareToken}`,
+                shareUrl: `${CONFIG.getPagesUrl()}/shared?token=${f.shareToken}`,
                 shareExpireDays: f.shareExpireDays !== undefined ? f.shareExpireDays : -1,
                 shareExpireAt: f.shareExpireAt || null,
                 shareMaxDownloads: f.shareMaxDownloads !== undefined ? f.shareMaxDownloads : -1,
@@ -1012,7 +1012,7 @@ const Netdisk = {
             `创建分享链接: ${fileId}`
         );
 
-        const shareUrl = `${CONFIG.getPagesUrl()}/shared.html?token=${shareToken}`;
+        const shareUrl = `${CONFIG.getPagesUrl()}/shared?token=${shareToken}`;
         return {
             success: true,
             shareUrl: shareUrl,

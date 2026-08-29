@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -34,11 +34,11 @@
             </form>
 
             <div class="mt-24 text-center">
-                <a href="register.html" class="link">没有账号？立即注册</a>
+                <a href="register" class="link">没有账号？立即注册</a>
             </div>
 
             <div class="mt-16 text-center">
-                <a href="reset.html" class="link">忘记密码？</a>
+                <a href="reset" class="link">忘记密码？</a>
             </div>
 
             <div id="resend-section" style="display: none; margin-top: 20px;">
@@ -64,7 +64,7 @@
 
             // 如果已登录，跳转到首页
             if (Netdisk.getCurrentUserLocal()) {
-                window.location.href = 'index.html';
+                window.location.href = 'index';
                 return;
             }
 
@@ -73,7 +73,7 @@
                 const autoLogin = await Netdisk.checkAutoLogin();
                 if (autoLogin) {
                     UI.showMessage('自动登录成功！', 'success');
-                    setTimeout(() => window.location.href = 'index.html', 500);
+                    setTimeout(() => window.location.href = 'index', 500);
                 }
             } catch (e) {
                 // 自动登录失败，忽略，显示登录表单
@@ -93,7 +93,7 @@
             try {
                 const result = await Netdisk.login(email, password, rememberMe);
                 UI.showMessage('登录成功！', 'success');
-                setTimeout(() => window.location.href = 'index.html', 800);
+                setTimeout(() => window.location.href = 'index', 800);
             } catch (error) {
                 UI.showMessage(error.message, 'error');
                 btn.disabled = false;

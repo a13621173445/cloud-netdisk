@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -179,7 +179,7 @@
     <!-- 导航栏 -->
     <nav class="navbar">
         <div class="container">
-            <a href="index.html" class="navbar-brand">GitHub Netdisk</a>
+            <a href="index" class="navbar-brand">GitHub Netdisk</a>
             <div class="navbar-right">
                 <div class="user-info">
                     <div class="user-avatar" id="user-avatar">A</div>
@@ -194,7 +194,7 @@
     <div class="container dashboard">
         <div class="admin-header">
             <h2>管理后台</h2>
-            <a href="index.html" class="back-link">← 返回网盘</a>
+            <a href="index" class="back-link">← 返回网盘</a>
         </div>
 
         <!-- 标签页 -->
@@ -266,7 +266,7 @@
 
             async init() {
                 if (!(await CONFIG.isConfigured())) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'login';
                     return;
                 }
 
@@ -274,7 +274,7 @@
                 this.currentUser = Netdisk.getCurrentUserLocal();
                 if (!this.currentUser) {
                     Netdisk.logout();
-                    window.location.href = 'login.html';
+                    window.location.href = 'login';
                     return;
                 }
 
@@ -286,7 +286,7 @@
                         this.currentUser = serverUser;
                     } else {
                         Netdisk.logout();
-                        window.location.href = 'login.html';
+                    window.location.href = 'login';
                         return;
                     }
                 } catch (e) {
@@ -296,7 +296,7 @@
                 // 检查管理员权限
                 if (!Netdisk.isAdmin()) {
                     UI.showMessage('无管理员权限', 'error');
-                    setTimeout(() => window.location.href = 'index.html', 1500);
+                    setTimeout(() => window.location.href = 'login', 1500);
                     return;
                 }
 
@@ -305,7 +305,7 @@
 
                 document.getElementById('logout-btn').addEventListener('click', async () => {
                     await Netdisk.logout();
-                    window.location.href = 'login.html';
+                    window.location.href = 'login';
                 });
 
                 await this.loadUsers();

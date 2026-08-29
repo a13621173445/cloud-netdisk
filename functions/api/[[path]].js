@@ -353,7 +353,18 @@ async function handleAdminUsers(request, env) {
         'SELECT id, username, email, role, status, verified, created_at FROM users ORDER BY created_at DESC'
     ).all();
 
-    return json({ users: results });
+    // 将数据库字段名映射为前端使用的驼峰命名
+    const users = results.map(u => ({
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        status: u.status,
+        verified: !!u.verified,
+        createdAt: u.created_at
+    }));
+
+    return json({ users });
 }
 
 // ============ 管理员：列出所有文件 ============

@@ -555,10 +555,22 @@ async function handleAdminUnfreezeRequests(request, env) {
     if (!isAdmin(user)) return json({ error: '无管理员权限' }, 403);
 
     const { results } = await env.DB.prepare(
-        "SELECT id, username, email, role, status, unfreeze_reason, unfreeze_requested_at FROM users WHERE unfreeze_requested = 1"
+        "SELECT id, username, email, role, status, status_reason, unfreeze_reason, unfreeze_requested_at FROM users WHERE unfreeze_requested = 1"
     ).all();
 
-    return json({ requests: results });
+    // 将数据库字段名映射为前端使用的驼峰命名
+    const requests = results.map(r => ({
+        id: r.id,
+        username: r.username,
+        email: r.email,
+        role: r.role,
+        status: r.status,
+        statusReason: r.status_reason || '',
+        unfreezeReason: r.unfreeze_reason || '',
+        unfreezeRequestedAt: r.unfreeze_requested_at
+    }));
+
+    return json({ requests });
 }
 
 // ============ 管理员：设置角色（设为/取消管理员） ============

@@ -1,5 +1,5 @@
 ﻿/**
- * GitHub Netdisk
+ * Cloud Netdisk
  * Copyright (C) 2026 a13621173445
  *
  * This program is free software: you can redistribute it and/or modify

@@ -1,4 +1,4 @@
-# GitHub Netdisk - 基于 GitHub 的网盘系统
+﻿# Cloud Netdisk - 基于 GitHub 的网盘系统
 
 一个完全运行在 GitHub 上的轻量级网盘系统，使用 GitHub 仓库作为文件存储，GitHub Actions 发送邮件，GitHub Pages 托管前端。
 

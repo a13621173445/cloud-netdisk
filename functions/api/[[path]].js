@@ -1,5 +1,5 @@
 /**
- * GitHub Netdisk - Cloudflare Pages Functions 通配路由
+ * Cloud Netdisk - Cloudflare Pages Functions 通配路由
  * 处理 /api/* 的所有认证请求，数据存储在 D1 数据库
  * Copyright (C) 2026 a13621173445
  * AGPL-3.0

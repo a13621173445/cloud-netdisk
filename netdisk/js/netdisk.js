@@ -1,5 +1,5 @@
 ﻿/**
- * GitHub Netdisk
+ * Cloud Netdisk
  * Copyright (C) 2026 a13621173445
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  */
 
 /**
- * GitHub Netdisk 核心业务逻辑
+ * Cloud Netdisk 核心业务逻辑
  * 包含：注册/登录/会话/邮箱验证/密码重置/文件管理/文件分享
  */
 
@@ -147,7 +147,7 @@ const Netdisk = {
 
         await GitHubAPI.dispatchEvent('send-email', {
             to: email,
-            subject: `${purpose} - GitHub Netdisk`,
+            subject: `${purpose} - Cloud Netdisk`,
             body: body
         });
     },
@@ -386,7 +386,7 @@ const Netdisk = {
 
         await GitHubAPI.dispatchEvent('send-email', {
             to: email,
-            subject: '重置密码 - GitHub Netdisk',
+            subject: '重置密码 - Cloud Netdisk',
             body: body
         });
 

@@ -1,5 +1,5 @@
 ﻿/**
- * GitHub Netdisk
+ * Cloud Netdisk
  * Copyright (C) 2026 a13621173445
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  */
 
 /**
- * GitHub Netdisk 配置文件
+ * Cloud Netdisk 配置文件
  * 
  * 部署步骤：
  * 1. 修改下方 GITHUB_OWNER 为你的 GitHub 用户名

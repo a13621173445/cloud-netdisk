@@ -18,7 +18,7 @@ const PAGE_MAP = {
 };
 
 export async function onRequest(context) {
-    const { request, env, next } = context;
+    const { request, next } = context;
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -26,13 +26,11 @@ export async function onRequest(context) {
     if (path.startsWith('/netdisk/')) {
         const page = path.replace('/netdisk/', '').split('/')[0];
         if (PAGE_MAP[page]) {
-            // 内部重写：返回对应 HTML 文件内容
+            // 构造新的请求 URL，指向对应的 .html 文件
             const htmlPath = `/netdisk/${PAGE_MAP[page]}`;
-            const response = await env.ASSETS.fetch(new Request(
-                new URL(htmlPath, url.origin),
-                request
-            ));
-            return response;
+            const newUrl = new URL(htmlPath, url.origin);
+            const newRequest = new Request(newUrl.toString(), request);
+            return await next(newRequest);
         }
     }
 

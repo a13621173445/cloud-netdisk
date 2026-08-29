@@ -151,12 +151,6 @@
                     document.getElementById('admin-btn').style.display = 'inline-flex';
                 }
 
-                // 检查账户状态：禁用用户只能查看解禁信息
-                if (this.currentUser.status === 'disabled') {
-                    this.showDisabledBanner();
-                    return;
-                }
-
                 // 初始化上传
                 this.initUpload();
 
@@ -190,22 +184,6 @@
                     document.getElementById('upload-hint').textContent = '点击此处或拖拽文件到此处上传';
                 }
                 this.loadFiles();
-            },
-
-            showDisabledBanner() {
-                document.querySelector('.dashboard-header').style.display = 'none';
-                document.getElementById('upload-area').style.display = 'none';
-                document.getElementById('file-list').innerHTML = `
-                    <div class="account-card" style="text-align:center;padding:40px;">
-                        <h3 style="color:#991B1B;margin-bottom:16px;">账户已被禁用</h3>
-                        <p style="margin:8px 0;color:var(--text-light);">你的账户已被禁用，无法进行文件相关操作。</p>
-                        <p style="margin:8px 0;color:var(--text-light);">如需解禁，请前往账户设置提交解禁申请。</p>
-                        <div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">
-                            <a href="account" class="btn btn-primary">前往账户设置</a>
-                            <button class="btn btn-secondary" onclick="Netdisk.logout().then(() => window.location.href='index')">退出登录</button>
-                        </div>
-                    </div>
-                `;
             },
 
             initUpload() {

@@ -68,7 +68,6 @@
             font-weight: 500;
         }
         .status-active { background: #D1FAE5; color: #065F46; }
-        .status-disabled { background: #FEE2E2; color: #991B1B; }
         .status-frozen { background: #DBEAFE; color: #1E40AF; }
         .status-deleted { background: #F3F4F6; color: #6B7280; }
         .status-normal { background: #D1FAE5; color: #065F46; }
@@ -411,7 +410,6 @@
 
                     const statusMap = {
                         'active': '<span class="status-badge status-active">正常</span>',
-                        'disabled': '<span class="status-badge status-disabled">已禁用</span>',
                         'frozen': '<span class="status-badge status-frozen">已冻结</span>',
                         'deleted': '<span class="status-badge status-deleted">已注销</span>'
                     };
@@ -445,7 +443,6 @@
                                             <div class="admin-actions">
                                                 ${this.canSetAdmin(u) ? (u.role === 'admin' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', false)">取消管理员</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.setAdminRole('${u.id}', true)">设为管理员</button>`) : ''}
                                                 ${this.canOperateUser(u) ? `
-                                                    ${u.status !== 'disabled' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.disableUser('${u.id}')">禁用</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解禁</button>`}
                                                     ${u.status !== 'frozen' ? `<button class="btn btn-secondary btn-sm" onclick="Admin.freezeUser('${u.id}')">冻结</button>` : `<button class="btn btn-secondary btn-sm" onclick="Admin.activateUser('${u.id}')">解冻</button>`}
                                                     <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${u.id}')">注销</button>
                                                 ` : '<span style="color:#999;font-size:12px">—</span>'}
@@ -638,7 +635,7 @@
                                         <td>${UI.escapeHtml(r.username)}</td>
                                         <td>${UI.escapeHtml(r.email)}</td>
                                         <td>${r.role === 'superadmin' ? '超级管理员' : (r.role === 'admin' ? '管理员' : '用户')}</td>
-                                        <td>${r.status === 'frozen' ? '已冻结' : (r.status === 'disabled' ? '已禁用' : '正常')}</td>
+                                        <td>${r.status === 'frozen' ? '已冻结' : '正常'}</td>
                                         <td>${UI.escapeHtml(r.statusReason || '无')}</td>
                                         <td style="max-width:200px;word-break:break-all;">${UI.escapeHtml(r.unfreezeReason || '无')}</td>
                                         <td>${UI.formatDate(r.unfreezeRequestedAt)}</td>
@@ -680,23 +677,6 @@
                     UI.hideLoading();
                     UI.showMessage('已拒绝解冻申请', 'success');
                     await this.loadUnfreezeRequests();
-                } catch (error) {
-                    UI.hideLoading();
-                    UI.showMessage(error.message, 'error');
-                }
-            },
-
-            async disableUser(userId) {
-                const confirmed = await UI.confirm('确定要禁用该用户吗？禁用后该用户无法进行文件操作，但可以登录查看解禁信息。', '禁用用户', '禁用', '取消');
-                if (!confirmed) return;
-                const reason = await this.showPrompt('禁用用户', '禁用原因（可为空）', '输入原因...');
-                if (reason === null) return;
-                try {
-                    UI.showLoading('处理中...');
-                    await Netdisk.adminDisableUser(userId, reason || '');
-                    UI.hideLoading();
-                    UI.showMessage('用户已禁用', 'success');
-                    await this.loadUsers();
                 } catch (error) {
                     UI.hideLoading();
                     UI.showMessage(error.message, 'error');

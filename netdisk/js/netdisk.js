@@ -618,39 +618,29 @@ const Netdisk = {
         return { success: true, message: '账户已注销，所有数据已删除' };
     },
 
-    // ============ 申请解冻/解禁 ============
+    // ============ 申请解冻 ============
 
     async requestUnfreeze(reason = '') {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
 
-        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData && usersData.users) || [];
-        const user = users.find(u => u.id === currentUser.id);
-        if (!user) throw new Error('用户不存在');
-
-        const status = user.status || 'active';
-        if (status === 'active') throw new Error('账户状态正常，无需申请解禁');
-        if (status === 'deleted') throw new Error('账户已注销，无法申请解禁');
-
         if (reason.length > 500) throw new Error('申请原因不能超过 500 字');
 
-        // 设置申请解禁标记
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const u = data.users.find(x => x.id === currentUser.id);
-                if (!u) throw new Error('用户不存在');
-                u.unfreezeRequested = true;
-                u.unfreezeRequestedAt = new Date().toISOString();
-                u.unfreezeReason = reason;
-                return data;
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/request-unfreeze`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            '申请解禁'
-        );
+            body: JSON.stringify({ reason })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '提交失败');
+        }
 
-        return { success: true, message: '解禁申请已提交，请等待管理员处理' };
+        return { success: true, message: result.message };
     },
 
     // ============ 管理员：查看解冻申请 ============
@@ -1350,13 +1340,6 @@ const Netdisk = {
         return { url: rawUrl, name: file.name, type: file.type };
     },
 
-    // 禁用用户（管理员） - 禁止登录
-    async adminDisableUser(userId, reason = '') {
-        this.requireAdmin();
-        await this._setUserStatus(userId, 'disabled', '禁用', reason);
-        return { success: true, message: '用户已禁用' };
-    },
-
     // 冻结用户（管理员） - 禁止登录，保留数据
     async adminFreezeUser(userId, reason = '') {
         this.requireAdmin();
@@ -1364,7 +1347,7 @@ const Netdisk = {
         return { success: true, message: '用户已冻结' };
     },
 
-    // 恢复用户正常状态（管理员） - 解冻/解禁
+    // 恢复用户正常状态（管理员） - 解冻
     async adminActivateUser(userId) {
         this.requireAdmin();
         const currentUser = this.getCurrentUserLocal();

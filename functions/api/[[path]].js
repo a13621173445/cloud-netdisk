@@ -136,6 +136,8 @@ export async function onRequest(context) {
                 return await handleVerify(request, env);
             case 'resend-code':
                 return await handleResendCode(request, env);
+            case 'request-unfreeze':
+                return await handleRequestUnfreeze(request, env);
             // ===== 管理员端点 =====
             case 'admin-users':
                 return await handleAdminUsers(request, env);
@@ -414,6 +416,28 @@ async function handleResendCode(request, env) {
     return json({ success: true, message: '验证码已重新发送' });
 }
 
+// ============ 申请解冻 ============
+
+async function handleRequestUnfreeze(request, env) {
+    const user = await getCurrentUser(request, env);
+    if (!user) return json({ error: '请先登录' }, 401);
+
+    const body = await request.json();
+    const { reason } = body;
+
+    if (reason && reason.length > 500) return json({ error: '申请原因不能超过 500 字' }, 400);
+
+    const status = user.status || 'active';
+    if (status === 'active') return json({ error: '账户状态正常，无需申请解冻' }, 400);
+    if (status === 'deleted') return json({ error: '账户已注销，无法申请解冻' }, 400);
+
+    await env.DB.prepare(
+        'UPDATE users SET unfreeze_requested = 1, unfreeze_requested_at = ?, unfreeze_reason = ? WHERE id = ?'
+    ).bind(new Date().toISOString(), reason || '', user.id).run();
+
+    return json({ success: true, message: '解冻申请已提交，请等待管理员处理' });
+}
+
 // ============ 发送验证码邮件 ============
 
 async function sendVerificationEmail(env, email, code) {
@@ -564,7 +588,7 @@ async function handleAdminSetRole(request, env) {
     return json({ success: true, message: makeAdmin ? '已设置为管理员' : '已取消管理员' });
 }
 
-// ============ 管理员：设置用户状态（禁用/冻结/恢复） ============
+// ============ 管理员：设置用户状态（冻结/恢复） ============
 
 async function handleAdminSetStatus(request, env) {
     const user = await getCurrentUser(request, env);
@@ -574,7 +598,7 @@ async function handleAdminSetStatus(request, env) {
     const { userId, status, reason } = body;
 
     if (!userId || !status) return json({ error: '缺少必要参数' }, 400);
-    const validStatuses = ['active', 'disabled', 'frozen'];
+    const validStatuses = ['active', 'frozen'];
     if (!validStatuses.includes(status)) return json({ error: '无效的状态值' }, 400);
     if (user.id === userId) return json({ error: '不能操作自己的账户' }, 400);
 

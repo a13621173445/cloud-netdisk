@@ -6,7 +6,7 @@
  */
 
 // Cloudflare Workers 的 TCP 连接能力（用于 SMTP 发送邮件）
-import { connect, startTls } from 'cloudflare:sockets';
+import { connect } from 'cloudflare:sockets';
 
 // UTF-8 安全的 base64 编码（替代 Node.js 的 Buffer）
 function utf8ToBase64(str) {
@@ -606,11 +606,8 @@ async function smtpSend(env, to, subject, textBody) {
     // 隐式 TLS（SSL）端口：465；STARTTLS 端口：587 或 25
     const useImplicitTls = port === 465;
 
-    // 建立 TCP 连接
-    let socket = connect({ hostname: server, port });
-    if (useImplicitTls) {
-        socket = await startTls(socket, { hostname: server });
-    }
+    // 建立 TCP 连接（隐式 TLS 直接在 connect 时启用 tls）
+    let socket = connect({ hostname: server, port, ...(useImplicitTls ? { tls: true } : {}) });
 
     // 响应读取状态
     let buffer = '';
@@ -681,8 +678,8 @@ async function smtpSend(env, to, subject, textBody) {
             const starttls = await sendCommand('STARTTLS');
             check(starttls, '220', 'STARTTLS 失败');
 
-            // 升级连接为 TLS，重新绑定 reader 和 writer
-            socket = await startTls(socket, { hostname: server });
+            // 升级连接为 TLS（socket.startTls() 是 Socket 实例方法），重新绑定 reader 和 writer
+            socket = await socket.startTls();
             buffer = '';
             startReaderLoop(socket);
             writer = socket.writable.getWriter();

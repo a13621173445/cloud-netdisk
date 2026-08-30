@@ -447,47 +447,26 @@ const Netdisk = {
     async changeEmail(newEmail, password) {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
+        const token = localStorage.getItem('netdisk_session');
+        if (!token) throw new Error('请先登录');
 
         if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
             throw new Error('请输入有效的邮箱地址');
         }
         if (!password) throw new Error('请输入当前密码以确认操作');
 
-        // 读取用户数据验证密码
-        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData && usersData.users) || [];
-        const user = users.find(u => u.id === currentUser.id);
-        if (!user) throw new Error('用户不存在');
-        const isValid = await verifyPassword(password, user.salt, user.passwordHash);
-        if (!isValid) throw new Error('密码错误');
-
-        // 检查新邮箱是否已被其他用户使用
-        if (users.some(u => u.email === newEmail && u.id !== currentUser.id)) {
-            throw new Error('该邮箱已被其他用户使用');
-        }
-
-        // 更新邮箱，并重置验证状态（需要重新验证）
-        const verificationToken = generateToken();
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const u = data.users.find(u => u.id === currentUser.id);
-                if (!u) throw new Error('用户不存在');
-                u.email = newEmail.trim();
-                u.verified = false;
-                u.verificationToken = verificationToken;
-                return data;
+        // 调用后端 API（D1 数据库 + SMTP 直发验证码）
+        const response = await fetch(`${CONFIG.getApiBase()}/api/change-email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            '修改邮箱'
-        );
-
-        // 发送验证邮件
-        try {
-            await this.sendVerificationEmail(newEmail.trim(), verificationToken);
-        } catch (e) {
-            // 邮件发送失败不影响修改
-            console.warn('验证邮件发送失败:', e);
+            body: JSON.stringify({ newEmail, password })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '修改邮箱失败');
         }
 
         // 更新本地存储的用户信息
@@ -498,7 +477,7 @@ const Netdisk = {
             localStorage.setItem('netdisk_user', JSON.stringify(localUser));
         }
 
-        return { success: true, message: '邮箱修改成功！请查收验证邮件完成新邮箱验证。' };
+        return { success: true, message: result.message };
     },
 
     // ============ 注销自己的账户 ============
@@ -507,115 +486,52 @@ const Netdisk = {
     async sendDeleteAccountCode() {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
+        const token = localStorage.getItem('netdisk_session');
+        if (!token) throw new Error('请先登录');
 
-        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData && usersData.users) || [];
-        const user = users.find(u => u.id === currentUser.id);
-        if (!user) throw new Error('用户不存在');
-
-        // 超级管理员不能注销自己
-        if (user.role === 'superadmin') throw new Error('超级管理员不能注销自己的账户');
-
-        const code = generateVerificationCode();
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const u = data.users.find(x => x.id === currentUser.id);
-                if (!u) throw new Error('用户不存在');
-                u.deleteAccountCode = code;
-                u.deleteAccountCodeExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-                return data;
+        // 调用后端 API（D1 数据库 + SMTP 直发验证码）
+        const response = await fetch(`${CONFIG.getApiBase()}/api/send-delete-code`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            '发送注销验证码'
-        );
+            body: JSON.stringify({})
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '发送失败');
+        }
 
-        await this.sendVerificationCode(user.email, code, '注销账户确认');
-        return { success: true, message: '注销验证码已发送到你的邮箱' };
+        return { success: true, message: result.message };
     },
 
     async deleteMyAccount(password, code) {
         const currentUser = this.getCurrentUserLocal();
         if (!currentUser) throw new Error('请先登录');
+        const token = localStorage.getItem('netdisk_session');
+        if (!token) throw new Error('请先登录');
         if (!password) throw new Error('请输入当前密码');
         if (!code) throw new Error('请输入邮箱验证码');
 
-        // 读取用户数据
-        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData && usersData.users) || [];
-        const user = users.find(u => u.id === currentUser.id);
-        if (!user) throw new Error('用户不存在');
-
-        // 超级管理员不能注销自己
-        if (user.role === 'superadmin') throw new Error('超级管理员不能注销自己的账户');
-        // 冻结状态不能注销（需要先解冻）
-        if (user.status === 'frozen') throw new Error('账户已被冻结，无法注销，请先联系管理员解冻');
-
-        // 第一重确认：验证密码
-        const isValid = await verifyPassword(password, user.salt, user.passwordHash);
-        if (!isValid) throw new Error('密码错误');
-
-        // 第二重确认：验证注销验证码
-        if (!user.deleteAccountCode || user.deleteAccountCode !== code) {
-            throw new Error('验证码错误');
-        }
-        if (user.deleteAccountCodeExpiry && new Date(user.deleteAccountCodeExpiry) < new Date()) {
-            throw new Error('验证码已过期，请重新获取');
-        }
-
-        // 删除该用户的所有文件
-        const { data: filesData } = await GitHubAPI.getJsonData(CONFIG.DATA.FILES);
-        const files = (filesData && filesData.files) || [];
-        const userFiles = files.filter(f => f.ownerId === currentUser.id);
-
-        for (const file of userFiles) {
-            try {
-                const fileInfo = await GitHubAPI.getContent(file.path);
-                if (fileInfo) {
-                    await GitHubAPI.deleteFile(file.path, `注销账户删除文件: ${file.name}`, fileInfo.sha);
-                }
-            } catch (e) {
-                // 忽略单个文件删除失败
-            }
-        }
-
-        // 删除用户文件元数据
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.FILES,
-            (data) => {
-                if (!data.files) data.files = [];
-                data.files = data.files.filter(f => f.ownerId !== currentUser.id);
-                return data;
+        // 调用后端 API（D1 数据库）
+        const response = await fetch(`${CONFIG.getApiBase()}/api/delete-account`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            '注销账户删除文件元数据'
-        );
-
-        // 删除用户会话
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.SESSIONS,
-            (data) => {
-                if (!data.sessions) data.sessions = [];
-                data.sessions = data.sessions.filter(s => s.userId !== currentUser.id);
-                return data;
-            },
-            '注销账户删除会话'
-        );
-
-        // 删除用户账户
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                data.users = data.users.filter(u => u.id !== currentUser.id);
-                return data;
-            },
-            '注销账户'
-        );
+            body: JSON.stringify({ password, code })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '注销失败');
+        }
 
         // 清除本地登录状态
         this.logout();
 
-        return { success: true, message: '账户已注销，所有数据已删除' };
+        return { success: true, message: result.message };
     },
 
     // ============ 申请解冻 ============

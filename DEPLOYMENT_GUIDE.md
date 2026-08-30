@@ -123,17 +123,19 @@ CREATE TABLE IF NOT EXISTS sessions (
 3. 输入 `frpz.cc`
 4. Cloudflare 会自动创建 CNAME 记录指向 `cloud-netdisk.pages.dev`
 
-### 7. 配置 GitHub Secrets（邮件发送）
+### 7. 配置 Cloudflare Pages 环境变量（邮件发送）
 
-在 GitHub 仓库 **Settings** → **Secrets and variables** → **Actions** 中添加：
+验证码邮件通过 Cloudflare Pages Function 直接使用 SMTP 发送，无需 GitHub Actions。请在 Pages 项目 **Settings** → **Environment variables** 中添加：
 
-| Secret 名称 | 说明 |
-|------------|------|
+| 变量名 | 说明 |
+|--------|------|
 | `SMTP_SERVER` | SMTP 服务器地址（如 `smtp.163.com`） |
-| `SMTP_PORT` | SMTP 端口（如 `465`） |
+| `SMTP_PORT` | SMTP 端口（`465` 为隐式 TLS，`587` 为 STARTTLS） |
 | `SMTP_USERNAME` | SMTP 用户名（邮箱地址） |
 | `SMTP_PASSWORD` | SMTP 授权码 |
 | `SMTP_FROM` | 发件人邮箱 |
+
+> 注意：`SMTP_PORT` 为 `465` 时使用隐式 TLS（SSL），为 `587` 或 `25` 时使用 STARTTLS。网易邮箱（163）推荐使用 `465` 端口。
 
 ### 8. 创建超管账号
 

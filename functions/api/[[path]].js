@@ -5,6 +5,19 @@
  * AGPL-3.0
  */
 
+// Cloudflare Workers 的 TCP 连接能力（用于 SMTP 发送邮件）
+import { connect, startTls } from 'cloudflare:sockets';
+
+// UTF-8 安全的 base64 编码（替代 Node.js 的 Buffer）
+function utf8ToBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
 // ============ 工具函数 ============
 
 function generateId() {
@@ -138,6 +151,12 @@ export async function onRequest(context) {
                 return await handleResendCode(request, env);
             case 'request-unfreeze':
                 return await handleRequestUnfreeze(request, env);
+            case 'change-email':
+                return await handleChangeEmail(request, env);
+            case 'send-delete-code':
+                return await handleSendDeleteCode(request, env);
+            case 'delete-account':
+                return await handleDeleteAccount(request, env);
             // ===== 管理员端点 =====
             case 'admin-users':
                 return await handleAdminUsers(request, env);
@@ -204,8 +223,10 @@ async function handleRegister(request, env) {
     try {
         await sendVerificationEmail(env, email, verificationCode);
     } catch (e) {
-        // 邮件发送失败不影响注册，但用户无法验证
+        // 邮件发送失败：删除刚注册的用户，并返回真实错误，避免用户误以为注册成功
+        await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
         console.error('验证码邮件发送失败:', e);
+        return json({ error: `验证码邮件发送失败：${e.message}，请稍后重试` }, 500);
     }
 
     return json({
@@ -411,6 +432,7 @@ async function handleResendCode(request, env) {
         await sendVerificationEmail(env, email, code);
     } catch (e) {
         console.error('验证码邮件发送失败:', e);
+        return json({ error: `验证码邮件发送失败：${e.message}，请稍后重试` }, 500);
     }
 
     return json({ success: true, message: '验证码已重新发送' });
@@ -438,7 +460,283 @@ async function handleRequestUnfreeze(request, env) {
     return json({ success: true, message: '解冻申请已提交，请等待管理员处理' });
 }
 
-// ============ 发送验证码邮件 ============
+// ============ 修改邮箱（已登录） ============
+
+async function handleChangeEmail(request, env) {
+    const user = await getCurrentUser(request, env);
+    if (!user) return json({ error: '请先登录' }, 401);
+
+    const body = await request.json();
+    const { newEmail, password } = body;
+
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        return json({ error: '请输入有效的邮箱地址' }, 400);
+    }
+    if (!password) return json({ error: '请输入当前密码以确认操作' }, 400);
+
+    // 验证密码
+    const fullUser = await env.DB.prepare(
+        'SELECT id, username, email, password_hash, salt, role, status FROM users WHERE id = ?'
+    ).bind(user.id).first();
+    if (!fullUser) return json({ error: '用户不存在' }, 404);
+
+    const isValid = await verifyPassword(password, fullUser.salt, fullUser.password_hash);
+    if (!isValid) return json({ error: '密码错误' }, 400);
+
+    // 检查新邮箱是否已被其他用户使用
+    const existing = await env.DB.prepare(
+        'SELECT id FROM users WHERE email = ? AND id != ?'
+    ).bind(newEmail.trim(), user.id).first();
+    if (existing) return json({ error: '该邮箱已被其他用户使用' }, 400);
+
+    // 生成新邮箱的验证码
+    const code = generateVerificationCode();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    // 更新邮箱并重置验证状态
+    await env.DB.prepare(
+        'UPDATE users SET email = ?, verified = 0, verification_code = ?, verification_code_expiry = ? WHERE id = ?'
+    ).bind(newEmail.trim(), code, expiry, user.id).run();
+
+    // 发送新邮箱验证码
+    try {
+        await sendVerificationEmail(env, newEmail.trim(), code);
+    } catch (e) {
+        // 邮件发送失败：回滚邮箱修改
+        await env.DB.prepare(
+            'UPDATE users SET email = ?, verified = 1, verification_code = NULL, verification_code_expiry = NULL WHERE id = ?'
+        ).bind(fullUser.email, user.id).run();
+        console.error('验证码邮件发送失败:', e);
+        return json({ error: `验证码邮件发送失败：${e.message}，请稍后重试` }, 500);
+    }
+
+    return json({ success: true, message: '邮箱修改成功！请查收验证邮件完成新邮箱验证。' });
+}
+
+// ============ 发送注销验证码 ============
+
+async function handleSendDeleteCode(request, env) {
+    const user = await getCurrentUser(request, env);
+    if (!user) return json({ error: '请先登录' }, 401);
+
+    const fullUser = await env.DB.prepare(
+        'SELECT id, username, email, role, status FROM users WHERE id = ?'
+    ).bind(user.id).first();
+    if (!fullUser) return json({ error: '用户不存在' }, 404);
+
+    // 超级管理员不能注销自己
+    if (fullUser.role === 'superadmin') return json({ error: '超级管理员不能注销自己的账户' }, 400);
+
+    const code = generateVerificationCode();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    await env.DB.prepare(
+        'UPDATE users SET delete_account_code = ?, delete_account_code_expiry = ? WHERE id = ?'
+    ).bind(code, expiry, user.id).run();
+
+    // 发送注销验证码
+    try {
+        await sendVerificationEmail(env, fullUser.email, code);
+    } catch (e) {
+        console.error('注销验证码邮件发送失败:', e);
+        return json({ error: `注销验证码邮件发送失败：${e.message}，请稍后重试` }, 500);
+    }
+
+    return json({ success: true, message: '注销验证码已发送到你的邮箱' });
+}
+
+// ============ 注销自己的账户 ============
+
+async function handleDeleteAccount(request, env) {
+    const user = await getCurrentUser(request, env);
+    if (!user) return json({ error: '请先登录' }, 401);
+
+    const body = await request.json();
+    const { password, code } = body;
+
+    if (!password) return json({ error: '请输入当前密码' }, 400);
+    if (!code) return json({ error: '请输入邮箱验证码' }, 400);
+
+    const fullUser = await env.DB.prepare(
+        'SELECT id, username, email, password_hash, salt, role, status, delete_account_code, delete_account_code_expiry FROM users WHERE id = ?'
+    ).bind(user.id).first();
+    if (!fullUser) return json({ error: '用户不存在' }, 404);
+
+    // 超级管理员不能注销自己
+    if (fullUser.role === 'superadmin') return json({ error: '超级管理员不能注销自己的账户' }, 400);
+    // 冻结状态不能注销
+    if (fullUser.status === 'frozen') return json({ error: '账户已被冻结，无法注销，请先联系管理员解冻' }, 400);
+
+    // 第一重确认：验证密码
+    const isValid = await verifyPassword(password, fullUser.salt, fullUser.password_hash);
+    if (!isValid) return json({ error: '密码错误' }, 400);
+
+    // 第二重确认：验证注销验证码
+    if (!fullUser.delete_account_code || fullUser.delete_account_code !== code) {
+        return json({ error: '验证码错误' }, 400);
+    }
+    if (fullUser.delete_account_code_expiry && new Date(fullUser.delete_account_code_expiry) < new Date()) {
+        return json({ error: '验证码已过期，请重新获取' }, 400);
+    }
+
+    // 删除用户会话
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id).run();
+
+    // 删除用户
+    await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id).run();
+
+    return json({ success: true, message: '账户已注销，所有数据已删除' });
+}
+
+// ============ 发送验证码邮件（原生 SMTP，无需 GitHub Actions） ============
+
+// SMTP 客户端：通过 Cloudflare Workers 的 connect() 建立 TCP 连接
+// 支持 STARTTLS 和隐式 TLS（SSL）两种方式
+async function smtpSend(env, to, subject, textBody) {
+    const server = env.SMTP_SERVER;
+    const port = parseInt(env.SMTP_PORT || '465', 10);
+    const username = env.SMTP_USERNAME;
+    const password = env.SMTP_PASSWORD;
+    const from = env.SMTP_FROM;
+
+    if (!server || !username || !password || !from) {
+        throw new Error('SMTP 配置不完整，请检查 SMTP_SERVER/SMTP_PORT/SMTP_USERNAME/SMTP_PASSWORD/SMTP_FROM 环境变量');
+    }
+
+    // 隐式 TLS（SSL）端口：465；STARTTLS 端口：587 或 25
+    const useImplicitTls = port === 465;
+
+    // 建立 TCP 连接
+    let socket = connect({ hostname: server, port });
+    if (useImplicitTls) {
+        socket = await startTls(socket, { hostname: server });
+    }
+
+    // 响应读取状态
+    let buffer = '';
+    let pendingResolve = null;
+    let pendingReject = null;
+
+    const waitForResponse = () => new Promise((resolve, reject) => {
+        pendingResolve = resolve;
+        pendingReject = reject;
+    });
+
+    // 启动读取循环（每次 TLS 升级后需重新调用）
+    const startReaderLoop = (sock) => {
+        const reader = sock.readable.getReader();
+        const decoder = new TextDecoder();
+        (async () => {
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    // SMTP 响应以 \r\n 结尾
+                    while (buffer.includes('\r\n')) {
+                        const idx = buffer.indexOf('\r\n');
+                        const line = buffer.slice(0, idx);
+                        buffer = buffer.slice(idx + 2);
+                        if (pendingResolve) {
+                            const resolve = pendingResolve;
+                            pendingResolve = null;
+                            resolve(line);
+                        }
+                    }
+                }
+            } catch (e) {
+                if (pendingReject) {
+                    pendingReject(e);
+                    pendingReject = null;
+                }
+            }
+        })();
+    };
+
+    startReaderLoop(socket);
+
+    let writer = socket.writable.getWriter();
+    const encoder = new TextEncoder();
+
+    const sendCommand = async (cmd) => {
+        await writer.write(encoder.encode(cmd + '\r\n'));
+        return await waitForResponse();
+    };
+
+    const check = (line, expectedPrefix, errMsg) => {
+        if (!line.startsWith(expectedPrefix)) {
+            throw new Error(`${errMsg}（服务器响应：${line}）`);
+        }
+    };
+
+    try {
+        // 读取服务器欢迎信息
+        const greeting = await waitForResponse();
+        check(greeting, '220', 'SMTP 服务器连接失败');
+
+        // 如果使用 STARTTLS（非 465 端口），先升级为 TLS
+        if (!useImplicitTls) {
+            const ehlo1 = await sendCommand('EHLO cloud-netdisk');
+            check(ehlo1, '250', 'EHLO 失败');
+            const starttls = await sendCommand('STARTTLS');
+            check(starttls, '220', 'STARTTLS 失败');
+
+            // 升级连接为 TLS，重新绑定 reader 和 writer
+            socket = await startTls(socket, { hostname: server });
+            buffer = '';
+            startReaderLoop(socket);
+            writer = socket.writable.getWriter();
+
+            const ehlo2 = await sendCommand('EHLO cloud-netdisk');
+            check(ehlo2, '250', 'EHLO 失败');
+        } else {
+            const ehlo = await sendCommand('EHLO cloud-netdisk');
+            check(ehlo, '250', 'EHLO 失败');
+        }
+
+        // 认证
+        const auth = await sendCommand(`AUTH LOGIN`);
+        check(auth, '334', 'SMTP 认证失败');
+        const userResp = await sendCommand(utf8ToBase64(username));
+        check(userResp, '334', 'SMTP 用户名认证失败');
+        const passResp = await sendCommand(utf8ToBase64(password));
+        check(passResp, '235', 'SMTP 密码认证失败（请检查授权码）');
+
+        // 发件人
+        const mailFrom = await sendCommand(`MAIL FROM:<${from}>`);
+        check(mailFrom, '250', 'MAIL FROM 失败');
+
+        // 收件人
+        const rcptTo = await sendCommand(`RCPT TO:<${to}>`);
+        check(rcptTo, '250', '收件人地址被拒绝');
+
+        // 数据
+        const data = await sendCommand('DATA');
+        check(data, '354', 'DATA 命令失败');
+
+        // 邮件内容（RFC 5322 格式）
+        const message = [
+            `From: Cloud Netdisk <${from}>`,
+            `To: <${to}>`,
+            `Subject: =?UTF-8?B?${utf8ToBase64(subject)}?=`,
+            'MIME-Version: 1.0',
+            'Content-Type: text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding: base64',
+            '',
+            utf8ToBase64(textBody)
+        ].join('\r\n');
+
+        await writer.write(encoder.encode(message + '\r\n.\r\n'));
+        const doneResp = await waitForResponse();
+        check(doneResp, '250', '邮件内容发送失败');
+
+        // 退出
+        await sendCommand('QUIT');
+    } finally {
+        try { writer.releaseLock(); } catch (e) {}
+        try { socket.close(); } catch (e) {}
+    }
+}
 
 async function sendVerificationEmail(env, email, code) {
     const body = `验证你的邮箱
@@ -449,33 +747,7 @@ async function sendVerificationEmail(env, email, code) {
 
 此邮件由系统自动发送，请勿回复。`;
 
-    // 通过 GitHub Actions 发送邮件
-    const owner = 'a13621173445';
-    const repo = 'cloud-netdisk';
-    const token = env.GITHUB_TOKEN;
-    if (!token) {
-        throw new Error('GitHub Token 未配置');
-    }
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/dispatches`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github+json',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            event_type: 'send-email',
-            client_payload: {
-                to: email,
-                subject: '验证你的邮箱 - Cloud Netdisk',
-                body: body
-            }
-        })
-    });
-
-    if (!response.ok && response.status !== 204) {
-        throw new Error('邮件发送失败');
-    }
+    await smtpSend(env, email, '验证你的邮箱 - Cloud Netdisk', body);
 }
 
 // ============ 管理员：列出所有用户 ============

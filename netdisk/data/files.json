@@ -1,3 +1,18 @@
 {
-  "files": []
+  "files": [
+    {
+      "id": "a219a41f-50cb-4f63-9440-3921a3a65f39",
+      "name": "____-950260904183024904.txt",
+      "size": 199,
+      "type": "text/plain",
+      "path": "netdisk/storage/a219a41f-50cb-4f63-9440-3921a3a65f39_____-950260904183024904.txt",
+      "ownerId": "ccd43392-73f7-4d13-9fc0-0d07d8a800bc",
+      "shared": false,
+      "shareToken": null,
+      "shareCreatedAt": "2026-09-04T10:35:41.832Z",
+      "shareViewCount": 0,
+      "shareDownloadCount": 0,
+      "uploadedAt": "2026-09-04T10:35:41.832Z"
+    }
+  ]
 }

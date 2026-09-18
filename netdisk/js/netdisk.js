@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Cloud Netdisk
  * Copyright (C) 2026 a13621173445
  *
@@ -108,7 +108,7 @@ const Netdisk = {
         if (!username || username.trim().length < 2) {
             throw new Error('用户名至少需要 2 个字符');
         }
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!email || !/[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             throw new Error('请输入有效的邮箱地址');
         }
         if (!password || password.length < 6) {
@@ -217,45 +217,23 @@ const Netdisk = {
 
     // 检查是否同一天同一 IP 已登录（用于自动登录）
     async checkAutoLogin() {
-        const ip = await this.getClientIp();
-        if (!ip) return null;
-
-        const today = this.getTodayString();
-        const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.SESSIONS);
-        const sessions = (data && data.sessions) || [];
-
-        // 查找同一天、同一 IP、未过期的会话
-        const session = sessions.find(s =>
-            s.ip === ip &&
-            s.lastLoginDate === today &&
-            new Date(s.expiresAt) > new Date()
-        );
-
-        if (!session) return null;
-
-        // 获取用户信息
-        const usersData = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData.data && usersData.data.users) || [];
-        const user = users.find(u => u.id === session.userId);
-
-        if (!user) return null;
-        const status = user.status || 'active';
-        if (status !== 'active') return null;
+        // 调用后端 API 查询 D1 中当天同一 IP 的有效会话
+        const response = await fetch(`${CONFIG.getApiBase()}/api/auto-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            return null;
+        }
 
         // 自动登录成功，设置本地会话
-        localStorage.setItem('netdisk_session', session.token);
-        localStorage.setItem('netdisk_user', JSON.stringify({
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            verified: user.verified,
-            role: user.role || 'user',
-            status: status
-        }));
+        localStorage.setItem('netdisk_session', result.token);
+        localStorage.setItem('netdisk_user', JSON.stringify(result.user));
 
         return {
-            token: session.token,
-            user: { id: user.id, username: user.username, email: user.email, verified: user.verified, role: user.role || 'user', status: status }
+            token: result.token,
+            user: result.user
         };
     },
 
@@ -336,44 +314,18 @@ const Netdisk = {
     async requestPasswordReset(email) {
         if (!email) throw new Error('请输入邮箱地址');
 
-        const resetToken = generateToken();
-        const resetExpiry = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30分钟有效
-
-        let userEmail = null;
-
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.email === email);
-                if (!user) throw new Error('该邮箱未注册');
-                user.resetToken = resetToken;
-                user.resetTokenExpiry = resetExpiry;
-                userEmail = user.email;
-                return data;
-            },
-            '密码重置请求'
-        );
-
-        // 发送重置邮件
-        const resetUrl = `${CONFIG.getPagesUrl()}/reset-confirm?token=${resetToken}`;
-        const body = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #4F46E5;">重置你的密码</h2>
-                <p>我们收到了你的密码重置请求。请点击下方按钮设置新密码：</p>
-                <a href="${resetUrl}" style="display: inline-block; background: #4F46E5; color: #fff; padding: 12px 32px; text-decoration: none; border-radius: 6px; margin: 16px 0;">重置密码</a>
-                <p style="color: #666; font-size: 14px;">或复制此链接到浏览器：<br>${resetUrl}</p>
-                <p style="color: #999; font-size: 12px;">此链接 30 分钟内有效。如非本人操作请忽略此邮件。</p>
-            </div>
-        `;
-
-        await GitHubAPI.dispatchEvent('send-email', {
-            to: email,
-            subject: '重置密码 - Cloud Netdisk',
-            body: body
+        // 调用后端 API：生成重置令牌存入 D1 + SMTP 发送重置邮件
+        const response = await fetch(`${CONFIG.getApiBase()}/api/request-reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
         });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '发送失败');
+        }
 
-        return { success: true, message: '密码重置邮件已发送，请查收邮箱。' };
+        return { success: true, message: result.message };
     },
 
     // ============ 确认密码重置 ============
@@ -382,27 +334,18 @@ const Netdisk = {
         if (!token) throw new Error('重置令牌无效');
         if (!newPassword || newPassword.length < 6) throw new Error('密码至少需要 6 个字符');
 
-        const salt = await generateSalt();
-        const passwordHash = await hashPassword(newPassword, salt);
+        // 调用后端 API：校验令牌并更新 D1 中的密码
+        const response = await fetch(`${CONFIG.getApiBase()}/api/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, newPassword })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '密码重置失败');
+        }
 
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const user = data.users.find(u => u.resetToken === token);
-                if (!user) throw new Error('重置令牌无效或已使用');
-                if (new Date(user.resetTokenExpiry) < new Date()) throw new Error('重置链接已过期，请重新申请');
-
-                user.passwordHash = passwordHash;
-                user.salt = salt;
-                user.resetToken = null;
-                user.resetTokenExpiry = null;
-                return data;
-            },
-            '密码重置完成'
-        );
-
-        return { success: true, message: '密码重置成功！请使用新密码登录。' };
+        return { success: true, message: result.message };
     },
 
     // ============ 修改密码（已登录） ============
@@ -414,32 +357,22 @@ const Netdisk = {
         if (!oldPassword || !newPassword) throw new Error('请输入旧密码和新密码');
         if (newPassword.length < 6) throw new Error('新密码至少需要 6 个字符');
 
-        // 先读取用户数据验证旧密码
-        const { data: usersData } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);
-        const users = (usersData && usersData.users) || [];
-        const user = users.find(u => u.id === currentUser.id);
-        if (!user) throw new Error('用户不存在');
-        const isValid = await verifyPassword(oldPassword, user.salt, user.passwordHash);
-        if (!isValid) throw new Error('旧密码错误');
-
-        // 哈希新密码
-        const newSalt = await generateSalt();
-        const newPasswordHash = await hashPassword(newPassword, newSalt);
-
-        await GitHubAPI.updateJsonData(
-            CONFIG.DATA.USERS,
-            (data) => {
-                if (!data.users) data.users = [];
-                const u = data.users.find(u => u.id === currentUser.id);
-                if (!u) throw new Error('用户不存在');
-                u.passwordHash = newPasswordHash;
-                u.salt = newSalt;
-                return data;
+        // 调用后端 API：在 D1 中验证旧密码并更新新密码
+        const token = localStorage.getItem('netdisk_session');
+        const response = await fetch(`${CONFIG.getApiBase()}/api/change-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
-            '修改密码'
-        );
+            body: JSON.stringify({ oldPassword, newPassword })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || '密码修改失败');
+        }
 
-        return { success: true, message: '密码修改成功！' };
+        return { success: true, message: result.message };
     },
 
     // ============ 修改邮箱（已登录） ============
@@ -450,7 +383,7 @@ const Netdisk = {
         const token = localStorage.getItem('netdisk_session');
         if (!token) throw new Error('请先登录');
 
-        if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        if (!newEmail || !/[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
             throw new Error('请输入有效的邮箱地址');
         }
         if (!password) throw new Error('请输入当前密码以确认操作');
@@ -1071,7 +1004,7 @@ const Netdisk = {
     // 创建管理员账户（仅当系统中还没有管理员时可用）
     async createAdminAccount(username, email, password) {
         if (!username || username.trim().length < 2) throw new Error('用户名至少需要 2 个字符');
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('请输入有效的邮箱地址');
+        if (!email || !/[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('请输入有效的邮箱地址');
         if (!password || password.length < 6) throw new Error('密码至少需要 6 个字符');
 
         const { data } = await GitHubAPI.getJsonData(CONFIG.DATA.USERS);

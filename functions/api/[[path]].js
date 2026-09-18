@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Cloud Netdisk - Cloudflare Pages Functions 通配路由
  * 处理 /api/* 的所有认证请求，数据存储在 D1 数据库
  * Copyright (C) 2026 a13621173445
@@ -153,6 +153,14 @@ export async function onRequest(context) {
                 return await handleRequestUnfreeze(request, env);
             case 'change-email':
                 return await handleChangeEmail(request, env);
+            case 'change-password':
+                return await handleChangePassword(request, env);
+            case 'request-reset':
+                return await handleRequestReset(request, env);
+            case 'reset-password':
+                return await handleResetPassword(request, env);
+            case 'auto-login':
+                return await handleAutoLogin(request, env);
             case 'send-delete-code':
                 return await handleSendDeleteCode(request, env);
             case 'delete-account':
@@ -193,7 +201,7 @@ async function handleRegister(request, env) {
     if (!username || username.trim().length < 2) {
         return json({ error: '用户名至少需要 2 个字符' }, 400);
     }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!email || !/[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return json({ error: '请输入有效的邮箱地址' }, 400);
     }
     if (!password || password.length < 6) {
@@ -469,7 +477,7 @@ async function handleChangeEmail(request, env) {
     const body = await request.json();
     const { newEmail, password } = body;
 
-    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    if (!newEmail || !/[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
         return json({ error: '请输入有效的邮箱地址' }, 400);
     }
     if (!password) return json({ error: '请输入当前密码以确认操作' }, 400);
@@ -588,6 +596,188 @@ async function handleDeleteAccount(request, env) {
     return json({ success: true, message: '账户已注销，所有数据已删除' });
 }
 
+// ============ 修改密码（已登录） ============
+
+async function handleChangePassword(request, env) {
+    const user = await getCurrentUser(request, env);
+    if (!user) return json({ error: '请先登录' }, 401);
+
+    const body = await request.json();
+    const { oldPassword, newPassword } = body;
+
+    if (!oldPassword || !newPassword) {
+        return json({ error: '请输入旧密码和新密码' }, 400);
+    }
+    if (newPassword.length < 6) {
+        return json({ error: '新密码至少需要 6 个字符' }, 400);
+    }
+
+    const dbUser = await env.DB.prepare(
+        'SELECT id, password_hash, salt FROM users WHERE id = ?'
+    ).bind(user.id).first();
+
+    if (!dbUser) {
+        return json({ error: '用户不存在' }, 404);
+    }
+
+    const isValid = await verifyPassword(oldPassword, dbUser.salt, dbUser.password_hash);
+    if (!isValid) {
+        return json({ error: '旧密码错误' }, 400);
+    }
+
+    const newSalt = await generateSalt();
+    const newPasswordHash = await hashPassword(newPassword, newSalt);
+
+    await env.DB.prepare(
+        'UPDATE users SET password_hash = ?, salt = ? WHERE id = ?'
+    ).bind(newPasswordHash, newSalt, user.id).run();
+
+    // 修改密码后清除该用户的所有旧会话，强制重新登录
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id).run();
+
+    return json({ success: true, message: '密码修改成功，请重新登录。' });
+}
+
+// ============ 密码重置请求 ============
+
+// 确保 users 表包含 reset_token / reset_token_expiry 列（线上 D1 需运行时迁移）
+async function ensureUsersSchema(env) {
+    const { results } = await env.DB.prepare('PRAGMA table_info(users)').all();
+    const cols = results.map(r => r.name);
+
+    if (!cols.includes('reset_token')) {
+        await env.DB.prepare('ALTER TABLE users ADD COLUMN reset_token TEXT').run();
+    }
+    if (!cols.includes('reset_token_expiry')) {
+        await env.DB.prepare('ALTER TABLE users ADD COLUMN reset_token_expiry TEXT').run();
+    }
+}
+
+async function handleRequestReset(request, env) {
+    const body = await request.json();
+    const { email } = body;
+
+    if (!email || !/[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return json({ error: '请输入有效的邮箱地址' }, 400);
+    }
+
+    await ensureUsersSchema(env);
+
+    const user = await env.DB.prepare(
+        'SELECT id, email, verified FROM users WHERE email = ?'
+    ).bind(email.trim()).first();
+
+    if (!user) {
+        return json({ error: '该邮箱未注册' }, 404);
+    }
+    if (!user.verified) {
+        return json({ error: '邮箱未验证，请先完成邮箱验证后再重置密码' }, 400);
+    }
+
+    const resetToken = generateToken();
+    const resetExpiry = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 分钟有效
+
+    await env.DB.prepare(
+        'UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?'
+    ).bind(resetToken, resetExpiry, user.id).run();
+
+    // 用请求来源生成重置链接（https://frpz.cc 或 pages.dev）
+    const origin = new URL(request.url).origin;
+    const resetUrl = `${origin}/netdisk/reset-confirm?token=${resetToken}`;
+
+    const resetBodyContent = `重置你的密码\n\n我们收到了你的密码重置请求。请在 30 分钟内打开以下链接设置新密码：\n\n${resetUrl}\n\n如果这不是你本人的操作，请忽略此邮件。\n\n此邮件由系统自动发送，请勿回复。`;
+
+    try {
+        await smtpSend(env, email.trim(), '重置密码 - Cloud Netdisk', resetBodyContent);
+    } catch (e) {
+        // 邮件发送失败：清除重置令牌，避免留下无效的过期令牌
+        await env.DB.prepare('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL WHERE id = ?').bind(user.id).run();
+        console.error('密码重置邮件发送失败:', e);
+        return json({ error: `密码重置邮件发送失败：${e.message}，请稍后重试` }, 500);
+    }
+
+    return json({ success: true, message: '密码重置邮件已发送，请查收邮箱。' });
+}
+
+// ============ 确认密码重置 ============
+
+async function handleResetPassword(request, env) {
+    const body = await request.json();
+    const { token, newPassword } = body;
+
+    if (!token) {
+        return json({ error: '重置令牌无效' }, 400);
+    }
+    if (!newPassword || newPassword.length < 6) {
+        return json({ error: '密码至少需要 6 个字符' }, 400);
+    }
+
+    await ensureUsersSchema(env);
+
+    const user = await env.DB.prepare(
+        'SELECT id, reset_token, reset_token_expiry FROM users WHERE reset_token = ?'
+    ).bind(token).first();
+
+    if (!user) {
+        return json({ error: '重置令牌无效或已使用' }, 400);
+    }
+    if (!user.reset_token_expiry || new Date(user.reset_token_expiry) < new Date()) {
+        return json({ error: '重置链接已过期，请重新申请' }, 400);
+    }
+
+    const salt = await generateSalt();
+    const passwordHash = await hashPassword(newPassword, salt);
+
+    await env.DB.prepare(
+        'UPDATE users SET password_hash = ?, salt = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?'
+    ).bind(passwordHash, salt, user.id).run();
+
+    // 重置成功后清除该用户的所有会话，强制使用新密码登录
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id).run();
+
+    return json({ success: true, message: '密码重置成功！请使用新密码登录。' });
+}
+
+// ============ 自动登录（同一天同一 IP） ============
+
+async function handleAutoLogin(request, env) {
+    const ip = request.headers.get('CF-Connecting-IP') || '';
+    if (!ip) {
+        return json({ success: false });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const { results: sessions } = await env.DB.prepare(
+        'SELECT token, user_id, expires_at FROM sessions WHERE ip = ? AND last_login_date = ? ORDER BY created_at DESC'
+    ).bind(ip, today).all();
+
+    for (const session of sessions) {
+        if (new Date(session.expires_at) < new Date()) continue;
+
+        const user = await env.DB.prepare(
+            'SELECT id, username, email, role, status, verified FROM users WHERE id = ?'
+        ).bind(session.user_id).first();
+
+        if (!user || user.status !== 'active') continue;
+
+        return json({
+            success: true,
+            token: session.token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                verified: !!user.verified,
+                role: user.role,
+                status: user.status
+            }
+        });
+    }
+
+    return json({ success: false });
+}
+
 // ============ 发送验证码邮件（原生 SMTP，无需 GitHub Actions） ============
 
 // SMTP 客户端：通过 Cloudflare Workers 的 connect() 建立 TCP 连接
@@ -692,7 +882,7 @@ async function smtpSend(env, to, subject, textBody) {
         }
 
         // 认证
-        const auth = await sendCommand(`AUTH LOGIN`);
+        const auth = await sendCommand('AUTH LOGIN');
         check(auth, '334', 'SMTP 认证失败');
         const userResp = await sendCommand(utf8ToBase64(username));
         check(userResp, '334', 'SMTP 用户名认证失败');
@@ -700,11 +890,11 @@ async function smtpSend(env, to, subject, textBody) {
         check(passResp, '235', 'SMTP 密码认证失败（请检查授权码）');
 
         // 发件人
-        const mailFrom = await sendCommand(`MAIL FROM:<${from}>`);
+        const mailFrom = await sendCommand('MAIL FROM:<' + from + '>');
         check(mailFrom, '250', 'MAIL FROM 失败');
 
         // 收件人
-        const rcptTo = await sendCommand(`RCPT TO:<${to}>`);
+        const rcptTo = await sendCommand('RCPT TO:<' + to + '>');
         check(rcptTo, '250', '收件人地址被拒绝');
 
         // 数据
@@ -713,9 +903,9 @@ async function smtpSend(env, to, subject, textBody) {
 
         // 邮件内容（RFC 5322 格式）
         const message = [
-            `From: Cloud Netdisk <${from}>`,
-            `To: <${to}>`,
-            `Subject: =?UTF-8?B?${utf8ToBase64(subject)}?=`,
+            'From: Cloud Netdisk <' + from + '>',
+            'To: <' + to + '>',
+            'Subject: =?UTF-8?B?' + utf8ToBase64(subject) + '?=',
             'MIME-Version: 1.0',
             'Content-Type: text/plain; charset=UTF-8',
             'Content-Transfer-Encoding: base64',
@@ -736,13 +926,7 @@ async function smtpSend(env, to, subject, textBody) {
 }
 
 async function sendVerificationEmail(env, email, code) {
-    const body = `验证你的邮箱
-
-你的验证码是：${code}
-
-验证码 10 分钟内有效，请勿泄露给他人。
-
-此邮件由系统自动发送，请勿回复。`;
+    const body = `验证你的邮箱\n\n你的验证码是：${code}\n\n验证码 10 分钟内有效，请勿泄露给他人。\n\n此邮件由系统自动发送，请勿回复。`;
 
     await smtpSend(env, email, '验证你的邮箱 - Cloud Netdisk', body);
 }
@@ -773,6 +957,42 @@ async function handleAdminUsers(request, env) {
 
 // ============ 管理员：列出所有文件 ============
 
+// Base64 解码（Cloudflare Workers 提供 atob，但为 UTF-8 安全使用 TextDecoder）
+function base64Decode(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+}
+
+// 从 GitHub 仓库读取 JSON 数据文件（files.json 尚未迁移到 D1）
+async function fetchGithubJson(env, path) {
+    const owner = env.GITHUB_OWNER || 'a13621173445';
+    const repo = env.GITHUB_REPO || 'cloud-netdisk';
+    const token = env.GITHUB_TOKEN;
+
+    if (!token) {
+        throw new Error('缺少 GITHUB_TOKEN 环境变量');
+    }
+
+    const resp = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + path + '?ref=main', {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+        }
+    });
+
+    if (!resp.ok) {
+        throw new Error('读取 GitHub 文件失败（' + resp.status + '）');
+    }
+
+    const data = await resp.json();
+    return JSON.parse(base64Decode(data.content));
+}
+
 async function handleAdminFiles(request, env) {
     const user = await getCurrentUser(request, env);
     if (!isAdmin(user)) return json({ error: '无管理员权限' }, 403);
@@ -784,8 +1004,21 @@ async function handleAdminFiles(request, env) {
     const userMap = {};
     users.forEach(u => { userMap[u.id] = u.username; });
 
-    // 文件数据仍存储在 GitHub，这里返回空列表（文件管理后续迁移）
-    return json({ files: [] });
+    // 文件元数据仍存储在 GitHub files.json，通过 GitHub API 读取
+    try {
+        const data = await fetchGithubJson(env, 'netdisk/data/files.json');
+        const files = (data && data.files) || [];
+
+        return json({
+            files: files.map(f => ({
+                ...f,
+                ownerName: userMap[f.ownerId] || '未知用户'
+            }))
+        });
+    } catch (e) {
+        console.error('管理员读取文件列表失败:', e);
+        return json({ files: [], error: e.message });
+    }
 }
 
 // ============ 管理员：按用户分组的文件 ============
@@ -794,18 +1027,41 @@ async function handleAdminFilesGrouped(request, env) {
     const user = await getCurrentUser(request, env);
     if (!isAdmin(user)) return json({ error: '无管理员权限' }, 403);
 
-    const { results: users } = await env.DB.prepare(
-        'SELECT id, username FROM users ORDER BY username ASC'
-    ).all();
+    try {
+        const data = await fetchGithubJson(env, 'netdisk/data/files.json');
+        const files = (data && data.files) || [];
 
-    const groups = users.map(u => ({
-        userId: u.id,
-        username: u.username,
-        fileCount: 0,
-        files: []
-    }));
+        const { results: users } = await env.DB.prepare(
+            'SELECT id, username FROM users ORDER BY username ASC'
+        ).all();
 
-    return json({ groups });
+        const ownedIds = new Set(users.map(u => u.id));
+        const groups = users.map(u => {
+            const userFiles = files.filter(f => f.ownerId === u.id && !f.isGlobal);
+            return {
+                userId: u.id,
+                username: u.username,
+                fileCount: userFiles.length,
+                files: userFiles.map(f => ({ ...f, ownerName: u.username }))
+            };
+        });
+
+        // 文件所有者不在 D1 用户表中（旧数据遗留），归入"未知用户"分组
+        const orphanFiles = files.filter(f => !ownedIds.has(f.ownerId) && !f.isGlobal);
+        if (orphanFiles.length > 0) {
+            groups.push({
+                userId: '',
+                username: '未知用户',
+                fileCount: orphanFiles.length,
+                files: orphanFiles.map(f => ({ ...f, ownerName: '未知用户' }))
+            });
+        }
+
+        return json({ groups });
+    } catch (e) {
+        console.error('管理员读取文件分组失败:', e);
+        return json({ groups: [], error: e.message });
+    }
 }
 
 // ============ 管理员：列出公共文件 ============
@@ -814,7 +1070,27 @@ async function handleAdminPublicFiles(request, env) {
     const user = await getCurrentUser(request, env);
     if (!isAdmin(user)) return json({ error: '无管理员权限' }, 403);
 
-    return json({ files: [] });
+    try {
+        const data = await fetchGithubJson(env, 'netdisk/data/files.json');
+        const files = (data && data.files) || [];
+        const publicFiles = files.filter(f => f.isGlobal === true);
+
+        const { results: users } = await env.DB.prepare(
+            'SELECT id, username FROM users'
+        ).all();
+        const userMap = {};
+        users.forEach(u => { userMap[u.id] = u.username; });
+
+        return json({
+            files: publicFiles.map(f => ({
+                ...f,
+                ownerName: userMap[f.ownerId] || '未知用户'
+            }))
+        });
+    } catch (e) {
+        console.error('管理员读取公共文件失败:', e);
+        return json({ files: [], error: e.message });
+    }
 }
 
 // ============ 管理员：列出解冻申请 ============

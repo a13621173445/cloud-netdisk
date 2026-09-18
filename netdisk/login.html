@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -106,7 +106,7 @@
                         ev.preventDefault();
                         UI.showLoading('发送中...');
                         try {
-                            await Netdisk.resendVerification(email);
+                            await Netdisk.resendVerificationCode(email);
                             UI.hideLoading();
                             UI.showMessage('验证邮件已重新发送', 'success');
                         } catch (err) {

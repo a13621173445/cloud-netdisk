@@ -2,8 +2,8 @@
 
 > **文档用途**：供接手开发的智能体快速了解项目当前状态、架构、已知问题和待修复项。
 >
-> **最后更新**：2026-09-18  
-> **当前部署 commit**：`6ceda3a`  
+> **最后更新**：2026-10-02  
+> **当前部署 commit**：`__COMMIT__`  
 > **线上地址**：https://frpz.cc  
 > **GitHub 仓库**：https://github.com/a13621173445/cloud-netdisk
 
@@ -57,6 +57,12 @@ frpz.cc (Cloudflare NS)
             │   ├── SMTP 邮件发送 (smtpSend 函数，使用 cloudflare:sockets)
             │   └── 管理员端点 (admin-users/admin-files/admin-set-role 等)
             │
+            ├── Pages Functions: /sponsor   (functions/sponsor.js)
+            │   └── 赞助页（全站统一入口，返回 https://frpz.cc）
+            │
+            ├── Pages Functions: /html/*    (functions/html/[[path]].js)
+            │   └── 作业查看：列表 + 搜索 + 单个作业页（文件内容从 GitHub API 读取）
+            │
             ├── D1 数据库: netdisk-db (变量名: DB)
             │   └── 表: users, sessions
             │
@@ -73,6 +79,8 @@ frpz.cc (Cloudflare NS)
 | 文件上传/下载/分享 | 前端 → GitHub Contents API（AES 解密的 Token 鉴权）→ 仓库文件 |
 | 管理员用户管理 | 前端 → Cloudflare Pages Function → D1 数据库 |
 | 管理员文件管理 | 前端 → GitHub API（管理员端 API 当前返回空列表，未迁移） |
+| 赞助页 | 浏览器 → Pages Function `/sponsor`（`functions/sponsor.js`）→ 静态二维码图 |
+| 作业查看 | 浏览器 → Pages Function `/html`（`functions/html/[[path]].js`）→ GitHub Contents API 读取 `html/` 目录 |
 
 ---
 
@@ -85,8 +93,18 @@ cloud-netdisk/
 ├── .nojekyll                         # 禁用 Jekyll
 │
 ├── functions/
-│   └── api/
-│       └── [[path]].js               # ★ 后端核心：所有 API 端点 + SMTP 客户端
+│   ├── api/
+│   │   └── [[path]].js               # ★ 后端核心：所有 API 端点 + SMTP 客户端
+│   ├── sponsor.js                    # /sponsor 赞助页（全站统一入口）
+│   └── html/
+│       └── [[path]].js               # /html 作业查看器（列表 + 搜索 + 单页）
+│
+├── html/                             # 作业 HTML 文件（保持原始中文名）
+│   ├── 人体内旅行-纪录片观看记录.html
+│   ├── 人体奥秘-BBC纪录片观看记录.html
+│   ├── 历史作业-永定河溯源小报.html
+│   ├── 美术作业-永定河水脉调研海报.html
+│   └── 道法作业-《欢迎来龙餐馆》观影短评.html
 │
 ├── netdisk/
 │   ├── index.html                    # 网盘主页面（文件列表/上传/分享）
@@ -98,7 +116,7 @@ cloud-netdisk/
 │   ├── reset.html                    # 密码重置请求
 │   ├── reset-confirm.html            # 密码重置确认
 │   ├── shared.html                   # 分享文件公开访问页
-│   ├── sponsor.html                  # 赞助页
+│   ├── sponsor.html                  # 旧赞助地址（自动跳转到 /sponsor）
 │   ├── eula.html                     # 用户协议
 │   │
 │   ├── css/
@@ -115,7 +133,7 @@ cloud-netdisk/
 │   │   ├── files.json                # 文件元数据（仍在使用）
 │   │   └── sessions.json             # 旧会话数据（迁移前遗留，D1 接管后不再使用）
 │   │
-│   ├── img/                          # 静态图片
+│   ├── img/                          # 静态图片（含 sponsor.png 赞助二维码）
 │   └── storage/ / public_storage/   # 文件实际存储路径（由 GitHub API 管理）
 │
 ├── .github/
@@ -251,6 +269,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 | GET | `/api/me` | Bearer Token | 获取当前用户信息 |
 | POST | `/api/verify` | 无 | 邮箱验证：校验验证码，设 `verified=1` |
 | POST | `/api/resend-code` | 无 | 重新发送验证码 |
+| POST | `/api/change-password` | Bearer Token | 修改密码：验证旧密码 → 更新 PBKDF2 哈希 → 删除该用户全部会话 |
+| POST | `/api/request-reset` | 无 | 请求重置：生成 30 分钟有效的重置 Token 存入 D1 + SMTP 发送重置邮件（失败则清空 Token） |
+| POST | `/api/reset-password` | 无 | 重置密码：校验 Token + 有效期 → 更新密码 → 清空全部会话 |
+| POST | `/api/auto-login` | 无 | 自动登录：按「同 IP + 当天」匹配会话，返回未过期 Token |
 
 ### 用户端点
 
@@ -322,6 +344,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 - `sendDeleteAccountCode()` → POST `/api/send-delete-code`
 - `deleteMyAccount()` → POST `/api/delete-account`
 - `requestUnfreeze()` → POST `/api/request-unfreeze`
+- `changePassword()` → POST `/api/change-password`
+- `requestPasswordReset()` → POST `/api/request-reset`
+- `resetPassword()` → POST `/api/reset-password`
+- `checkAutoLogin()` → POST `/api/auto-login`
 - `adminListUsers()` → GET `/api/admin-users`
 - `adminListFiles()` → GET `/api/admin-files`
 - `adminListFilesGroupedByUser()` → GET `/api/admin-files-grouped`
@@ -349,10 +375,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 - `sendVerificationCode()` — 通过 `GitHubAPI.dispatchEvent('send-email', ...)` 触发 Actions
 - `sendVerificationEmail()` — 同上
 - `resendVerification()` — 同上
-- `requestPasswordReset(email)` — 直接操作 `users.json`（已废弃，未迁移到 D1）
-- `resetPassword(token, newPassword)` — 同上
-- `changePassword(oldPassword, newPassword)` — 直接操作 `users.json`（已废弃，未迁移到 D1）
-- `checkAutoLogin()` — 直接操作 `sessions.json`（已废弃，未迁移到 D1）
 - `createAdminAccount()` — 直接操作 `users.json`（已废弃，未迁移到 D1）
 
 ### `ui.js` — UI 工具
@@ -484,15 +506,17 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 8. **注销账户**：密码 + 验证码双重验证 → 删除用户和会话
 9. **管理员用户管理**：列出用户/冻结/恢复/注销/设置角色
 10. **解冻申请**：用户提交 → 管理员审批
-11. **文件上传/下载/分享**：GitHub API 操作（未迁移，仍在工作）
+11. **修改密码**：验证旧密码 → 更新 D1 哈希 → 清空全部会话
+12. **密码重置**：请求重置生成 30 分钟 Token → SMTP 发信 → 校验后更新密码并清空会话
+13. **自动登录**：同 IP + 当天匹配会话返回 Token
+14. **文件上传/下载/分享**：GitHub API 操作（未迁移，仍在工作）
+15. **赞助页**：`/sponsor` 由 `functions/sponsor.js` 渲染，二维码 `QR_URL` 指向 `/netdisk/img/sponsor.png`
+16. **作业查看**：`/html` 由 `functions/html/[[path]].js` 通过 GitHub API 读取 `html/*.html`，保留中文原文件名
 
 ### ⚠️ 部分工作但有问题
 
-1. **密码重置**：`requestPasswordReset()` 和 `resetPassword()` 仍直接操作 `users.json`，未迁移到 D1，**功能已失效**
-2. **修改密码**：`changePassword()` 仍直接操作 `users.json`，未迁移到 D1，**功能已失效**
-3. **自动登录**：`checkAutoLogin()` 仍直接操作 `sessions.json`，未迁移到 D1，**功能已失效**
-4. **管理员文件管理**：API 返回空列表，文件管理功能未迁移到后端
-5. **管理员下架/恢复/删除文件**：仍通过 GitHub API 操作 `files.json`
+1. **管理员文件管理**：API 返回空列表，文件管理功能未迁移到后端
+2. **管理员下架/恢复/删除文件**：仍通过 GitHub API 操作 `files.json`
 
 ### ❌ 已废弃
 
@@ -504,52 +528,37 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 
 ## 14. 已知问题与待修复项
 
-### 🔴 严重（功能失效）
+### ✅ 已修复（2026-09-18 迁移完成）
 
-1. **修改密码功能失效**
-   - 位置：`netdisk.js` → `changePassword()`
-   - 问题：仍通过 `GitHubAPI.updateJsonData(CONFIG.DATA.USERS, ...)` 操作 `users.json`，但用户数据已迁移到 D1
-   - 修复方案：新增后端 API `/api/change-password`，在 D1 中验证旧密码并更新新密码
-   - 前端：`changePassword()` 改为调用 `/api/change-password`
-
-2. **密码重置功能失效**
-   - 位置：`netdisk.js` → `requestPasswordReset()` 和 `resetPassword()`
-   - 问题：仍操作 `users.json`，未迁移到 D1
-   - 修复方案：
-     - 新增 `/api/request-reset`：生成重置 Token 存入 D1 + SMTP 发送重置邮件
-     - 新增 `/api/reset-password`：验证 Token + 更新密码
-     - 前端两个函数改为调用后端 API
-
-3. **自动登录功能失效**
-   - 位置：`netdisk.js` → `checkAutoLogin()`
-   - 问题：仍操作 `sessions.json`，未迁移到 D1
-   - 修复方案：可以移除此功能，或新增后端 API 查询同 IP 当天会话
+1. **修改密码**：已由 `POST /api/change-password` 实现，前端 `changePassword()` 已改为调用后端 API
+2. **密码重置**：已由 `POST /api/request-reset` + `POST /api/reset-password` 实现，重置 Token 存入 D1，30 分钟有效
+3. **自动登录**：已由 `POST /api/auto-login` 实现，按同 IP + 当天匹配会话
 
 ### 🟡 中等（代码残留/不一致）
 
-4. **前端废弃方法残留**
+1. **前端废弃方法残留**
    - `sendVerificationCode()`、`sendVerificationEmail()`、`resendVerification()` 通过 `dispatchEvent` 触发 Actions，不再需要
    - 应删除这些方法，或至少确保不被调用
 
-5. **管理员文件管理 API 返回空**
+2. **管理员文件管理 API 返回空**
    - `handleAdminFiles()`、`handleAdminFilesGrouped()`、`handleAdminPublicFiles()` 均返回空列表
    - 文件元数据仍在 `files.json`（GitHub 仓库），后端无法直接访问
    - 需要：要么将文件元数据也迁移到 D1，要么后端通过 GitHub API 读取 `files.json`
 
-6. **`createAdminAccount()` 方法废弃**
+3. **`createAdminAccount()` 方法废弃**
    - 仍直接操作 `users.json`，应通过 D1 创建或通过注册+手动设为 superadmin
 
-7. **旧 JSON 文件残留**
+4. **旧 JSON 文件残留**
    - `netdisk/data/users.json` 和 `sessions.json` 不再被后端使用，但仍存在于仓库中
    - `files.json` 仍在使用
 
 ### 🟢 低优先级
 
-8. **`push_files.ps1` 脚本**：用途不明确，可能是早期批量推送文件用
+5. **`push_files.ps1` 脚本**：用途不明确，可能是早期批量推送文件用
 
-9. **`files_batch2.json`**：根目录存在，用途不明确
+6. **`files_batch2.json`**：根目录存在，用途不明确
 
-10. **SMTP 错误未分类**：所有 SMTP 错误都作为 500 返回，前端无法区分是配置问题还是临时故障
+7. **SMTP 错误未分类**：所有 SMTP 错误都作为 500 返回，前端无法区分是配置问题还是临时故障
 
 ---
 
@@ -571,6 +580,15 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 | `eda8f05` | 修复解冻申请字段名映射 |
 | `57d1fff` | 修改邮箱和注销账户改为 SMTP 直发验证码 |
 | `6ceda3a` | 修复 cloudflare:sockets 导入方式（startTls 是实例方法） |
+| `c30d28c` | 修改密码 / 密码重置 / 自动登录迁移到 D1 后端 API（`functions/api`，新增 change-password / request-reset / reset-password / auto-login） |
+| `60804cd` | 前端 `netdisk.js` 同步改为调用上述后端 D1 API |
+| `a1d042a` | 登录页 `login.html` 重新发送验证码改用新版 API 方法 |
+| `fa00a37` / `5938a87` | 上传文件 `github-recovery-codes.txt`（元数据 + 内容） |
+| `2557776` | 新增作业查看器 `/html`（列表 + 搜索），`index.html` 第三个预留按钮接入 |
+| `e3df0b2` | 作业查看函数改用 `[[path]]` 通配，匹配 `/html/<file>.html` |
+| `a39e707` | 修复作业元数据读取（改为从完整目录列表读取，避免被 .html 过滤） |
+| `5f5bbce` | `/sponsor` 根路径渲染赞助页，所有赞助链接统一指向此；作业文件恢复中文原名称 |
+| `__COMMIT__` | 更换赞助二维码图片（`netdisk/img/sponsor.png`）；补齐本文档此前未记录的变更 |
 
 ---
 
@@ -583,6 +601,7 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 3. Cloudflare Pages 自动触发构建部署（约 1-2 分钟）
 4. 构建命令：`mkdir -p dist/netdisk && cp index.html dist/ && cp -r netdisk/css netdisk/js netdisk/img dist/netdisk/ && cp netdisk/*.html dist/netdisk/`
 5. 输出目录：`dist`
+6. `html/`（作业 HTML 文件）与 `functions/` 不进入 `dist`：`functions/` 由 Pages 自动识别为 Functions，`html/` 由 `functions/html/[[path]].js` 在运行时通过 GitHub API 读取
 
 ### D1 数据库操作
 
@@ -614,5 +633,6 @@ Cloudflare Dashboard → Pages → cloud-netdisk → Settings → Environment va
 6. 检查环境变量是否配置（6 个变量 + 1 个 D1 绑定）
 7. **不要使用** `sendVerificationCode()` 等前端废弃方法
 8. **不要操作** `netdisk/data/users.json` 和 `sessions.json`（已废弃）
-9. 密码重置和修改密码功能需要迁移到 D1 后端（当前失效）
-10. 文件管理功能仍在用 GitHub API（正常工作，但管理员端 API 返回空）
+9. 测试修改密码 / 密码重置 / 自动登录（已迁移到 D1 后端 API，见 `/api/change-password` 等）
+10. 检查 `/sponsor`（赞助页，二维码为 `netdisk/img/sponsor.png`）与 `/html`（作业查看）是否正常
+11. 文件管理功能仍在用 GitHub API（正常工作，但管理员端 API 返回空）

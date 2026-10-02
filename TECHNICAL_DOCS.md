@@ -61,7 +61,7 @@ frpz.cc (Cloudflare NS)
             │   └── 赞助页（全站统一入口，返回 https://frpz.cc）
             │
             ├── Pages Functions: /html/*    (functions/html/[[path]].js)
-            │   └── 作业查看：列表 + 搜索 + 单个作业页（文件内容从 GitHub API 读取）
+            │   └── HTML查看：列表 + 搜索 + 单个作业页（文件内容从 GitHub API 读取）
             │
             ├── D1 数据库: netdisk-db (变量名: DB)
             │   └── 表: users, sessions
@@ -80,7 +80,7 @@ frpz.cc (Cloudflare NS)
 | 管理员用户管理 | 前端 → Cloudflare Pages Function → D1 数据库 |
 | 管理员文件管理 | 前端 → GitHub API（管理员端 API 当前返回空列表，未迁移） |
 | 赞助页 | 浏览器 → Pages Function `/sponsor`（`functions/sponsor.js`）→ 静态二维码图 |
-| 作业查看 | 浏览器 → Pages Function `/html`（`functions/html/[[path]].js`）→ GitHub Contents API 读取 `html/` 目录 |
+| HTML查看 | 浏览器 → Pages Function `/html`（`functions/html/[[path]].js`）→ GitHub Contents API 读取 `html/` 目录 |
 
 ---
 
@@ -97,7 +97,7 @@ cloud-netdisk/
 │   │   └── [[path]].js               # ★ 后端核心：所有 API 端点 + SMTP 客户端
 │   ├── sponsor.js                    # /sponsor 赞助页（全站统一入口）
 │   └── html/
-│       └── [[path]].js               # /html 作业查看器（列表 + 搜索 + 单页）
+│       └── [[path]].js               # /html HTML查看器（列表 + 搜索 + 单页）
 │
 ├── html/                             # 作业 HTML 文件（保持原始中文名）
 │   ├── 人体内旅行-纪录片观看记录.html
@@ -466,7 +466,7 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 | 重置确认 | `/netdisk/reset-confirm` | `netdisk/reset-confirm.html` |
 | 分享文件 | `/netdisk/shared` | `netdisk/shared.html` |
 | 赞助 | `/sponsor` | `functions/sponsor.js`（旧地址 `/netdisk/sponsor` 会自动跳转） |
-| 作业查看 | `/html` | `functions/html/[[path]].js`（列表 + 搜索 + 单个作业 `/html/<原名>.html`） |
+| HTML查看 | `/html` | `functions/html/[[path]].js`（列表 + 搜索 + 单个作业 `/html/<原名>.html`） |
 | 用户协议 | `/netdisk/eula` | `netdisk/eula.html` |
 
 ---
@@ -511,7 +511,7 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 13. **自动登录**：同 IP + 当天匹配会话返回 Token
 14. **文件上传/下载/分享**：GitHub API 操作（未迁移，仍在工作）
 15. **赞助页**：`/sponsor` 由 `functions/sponsor.js` 渲染，二维码 `QR_URL` 指向 `/netdisk/img/sponsor.png`
-16. **作业查看**：`/html` 由 `functions/html/[[path]].js` 通过 GitHub API 读取 `html/*.html`，保留中文原文件名
+16. **HTML查看**：`/html` 由 `functions/html/[[path]].js` 通过 GitHub API 读取 `html/*.html`，保留中文原文件名
 
 ### ⚠️ 部分工作但有问题
 
@@ -584,8 +584,8 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 | `60804cd` | 前端 `netdisk.js` 同步改为调用上述后端 D1 API |
 | `a1d042a` | 登录页 `login.html` 重新发送验证码改用新版 API 方法 |
 | `fa00a37` / `5938a87` | 上传文件 `github-recovery-codes.txt`（元数据 + 内容） |
-| `2557776` | 新增作业查看器 `/html`（列表 + 搜索），`index.html` 第三个预留按钮接入 |
-| `e3df0b2` | 作业查看函数改用 `[[path]]` 通配，匹配 `/html/<file>.html` |
+| `2557776` | 新增HTML查看器 `/html`（列表 + 搜索），`index.html` 第三个预留按钮接入 |
+| `e3df0b2` | HTML查看函数改用 `[[path]]` 通配，匹配 `/html/<file>.html` |
 | `a39e707` | 修复作业元数据读取（改为从完整目录列表读取，避免被 .html 过滤） |
 | `5f5bbce` | `/sponsor` 根路径渲染赞助页，所有赞助链接统一指向此；作业文件恢复中文原名称 |
 | `1e06317` | 更换赞助二维码图片（`netdisk/img/sponsor.png`）；补齐本文档此前未记录的变更 |
@@ -634,5 +634,5 @@ Cloudflare Dashboard → Pages → cloud-netdisk → Settings → Environment va
 7. **不要使用** `sendVerificationCode()` 等前端废弃方法
 8. **不要操作** `netdisk/data/users.json` 和 `sessions.json`（已废弃）
 9. 测试修改密码 / 密码重置 / 自动登录（已迁移到 D1 后端 API，见 `/api/change-password` 等）
-10. 检查 `/sponsor`（赞助页，二维码为 `netdisk/img/sponsor.png`）与 `/html`（作业查看）是否正常
+10. 检查 `/sponsor`（赞助页，二维码为 `netdisk/img/sponsor.png`）与 `/html`（HTML查看）是否正常
 11. 文件管理功能仍在用 GitHub API（正常工作，但管理员端 API 返回空）

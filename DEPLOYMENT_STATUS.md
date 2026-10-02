@@ -152,7 +152,7 @@ dist/
 以下目录/文件在源码仓库中存在，但不会被复制到 `dist/`：
 
 - `functions/` — Pages Functions 由 Cloudflare 自动处理，不需要构建到 dist
-- `html/` — 作业查看页面的 HTML 文件，由 `functions/html/[[path]].js` 通过 GitHub API 读取内容，无需进入 dist
+- `html/` — HTML查看页面的 HTML 文件，由 `functions/html/[[path]].js` 通过 GitHub API 读取内容，无需进入 dist
 - `netdisk/data/` — 数据文件（GitHub API 管理）
 - `netdisk/storage/` — 文件存储（GitHub API 管理）
 - `.github/workflows/` — GitHub Actions（已废弃）
@@ -171,7 +171,7 @@ dist/
 | - | `5f5bbce` | 2026-10-02 13:00 | ✅ 成功 | 赞助页改为根路径 `/sponsor`（全站入口统一、返回 frpz.cc）；作业改用 HTML 原始中文名 |
 | - | `a39e707` | 2026-10-02 12:49 | ✅ 成功 | 修复作业列表读取 `homework.json` 元数据（随后改为直接用文件名，该文件已删除） |
 | - | `e3df0b2` | 2026-10-02 12:47 | ✅ 成功 | `functions/html/index.js` 改名 `[[path]].js`，使 `/html/<file>.html` 能匹配 Pages Function |
-| - | `2557776` | 2026-10-02 12:43 | ✅ 成功 | 新增作业查看 `/html`（列表 + 搜索），首页第三个预留按钮接入 |
+| - | `2557776` | 2026-10-02 12:43 | ✅ 成功 | 新增HTML查看 `/html`（列表 + 搜索），首页第三个预留按钮接入 |
 | - | `fa00a37` / `5938a87` | 2026-09-26 07:07 | ✅ 成功 | 用户上传文件 `github-recovery-codes.txt`（数据操作，非代码变更） |
 | - | `a1d042a` | 2026-09-18 15:59 | ✅ 成功 | 登录页「重新发送验证码」改用新版 API 方法（`login.html`） |
 | - | `60804cd` | 2026-09-18 15:59 | ✅ 成功 | 前端 `netdisk.js`：修改密码/密码重置/自动登录改为调用后端 D1 API |
@@ -198,10 +198,10 @@ Uncaught SyntaxError: The requested module 'cloudflare:sockets' does not provide
 
 | 入口 | URL | 实现 |
 |------|-----|------|
-| 首页 | `https://frpz.cc` | `index.html`，含 3 个入口按钮：进入网盘 / 赞助 / 作业查看 |
+| 首页 | `https://frpz.cc` | `index.html`，含 3 个入口按钮：进入网盘 / 赞助 / HTML查看 |
 | 网盘 | `https://frpz.cc/netdisk/index` | `netdisk/index.html` |
 | 赞助 | `https://frpz.cc/sponsor` | `functions/sponsor.js`；旧地址 `/netdisk/sponsor` 自动跳转；二维码图 `/netdisk/img/sponsor.png` |
-| 作业查看 | `https://frpz.cc/html` | `functions/html/[[path]].js`；列表 + 搜索，单个作业 `/html/<原名>.html` |
+| HTML查看 | `https://frpz.cc/html` | `functions/html/[[path]].js`；列表 + 搜索，单个作业 `/html/<原名>.html` |
 
 ### ✅ 正常运行
 
@@ -225,7 +225,7 @@ Uncaught SyntaxError: The requested module 'cloudflare:sockets' does not provide
 | 密码重置（邮件链接） | 已迁移到 D1：`POST /api/request-reset`（SMTP 发重置链接，30 分钟有效）+ `POST /api/reset-password` |
 | 自动登录 | 已迁移到 D1：`POST /api/auto-login`（同 IP + 同一天复用未过期会话） |
 | 赞助页 | 根路径 `/sponsor` 统一入口，返回 `https://frpz.cc` |
-| 作业查看 | 根路径 `/html`，列表 + 搜索，文件存于仓库 `html/` 目录（中文原名） |
+| HTML查看 | 根路径 `/html`，列表 + 搜索，文件存于仓库 `html/` 目录（中文原名） |
 
 ### ❌ 功能失效
 

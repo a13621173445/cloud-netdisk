@@ -44,7 +44,7 @@ body {
     padding: 40px;
     text-align: center;
 }
-.sponsor-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #1d1d1f; }
+.sponsor-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 24px; color: #1d1d1f; }
 .sponsor-card p { color: #86868b; font-size: 14px; margin-bottom: 24px; }
 .sponsor-image {
     width: 100%;
@@ -72,7 +72,6 @@ body {
 <body>
     <div class="sponsor-card">
         <h1>赞助</h1>
-        <p>如果觉得网盘好用，欢迎赞助支持</p>
         <div class="sponsor-image">
             <img src="${QR_URL}" alt="赞助二维码">
         </div>

@@ -249,11 +249,15 @@ async function fetchFilesJson(env) {
             headers: {
                 'Authorization': 'Bearer ' + token,
                 'Accept': 'application/vnd.github+json',
-                'X-GitHub-Api-Version': '2022-11-28'
+                'X-GitHub-Api-Version': '2022-11-28',
+                'User-Agent': 'cloud-netdisk-pages'
             }
         }
     );
-    if (!resp.ok) throw new Error('读取文件元数据失败（' + resp.status + '）');
+    if (!resp.ok) {
+        const detail = await resp.text().catch(() => '');
+        throw new Error('读取文件元数据失败（' + resp.status + '）' + detail.slice(0, 200));
+    }
     const data = await resp.json();
     return JSON.parse(base64Decode(data.content));
 }

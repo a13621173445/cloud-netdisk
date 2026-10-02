@@ -3,7 +3,7 @@
 > **文档用途**：供接手开发的智能体快速了解项目当前状态、架构、已知问题和待修复项。
 >
 > **最后更新**：2026-10-02  
-> **当前部署 commit**：`__COMMIT__`  
+> **当前部署 commit**：`1e06317`  
 > **线上地址**：https://frpz.cc  
 > **GitHub 仓库**：https://github.com/a13621173445/cloud-netdisk
 
@@ -588,7 +588,7 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 | `e3df0b2` | 作业查看函数改用 `[[path]]` 通配，匹配 `/html/<file>.html` |
 | `a39e707` | 修复作业元数据读取（改为从完整目录列表读取，避免被 .html 过滤） |
 | `5f5bbce` | `/sponsor` 根路径渲染赞助页，所有赞助链接统一指向此；作业文件恢复中文原名称 |
-| `__COMMIT__` | 更换赞助二维码图片（`netdisk/img/sponsor.png`）；补齐本文档此前未记录的变更 |
+| `1e06317` | 更换赞助二维码图片（`netdisk/img/sponsor.png`）；补齐本文档此前未记录的变更 |
 
 ---
 

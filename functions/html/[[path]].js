@@ -11,7 +11,8 @@
  *
  * 内容来源：GitHub 仓库的 html/ 目录（Contents API）。
  * 把新的 .html 文件放进仓库 html/ 目录并 push，无需改代码就会自动出现在列表里。
- * 标题等信息可在 html/homework.json 里补充（可选，缺失时用文件名）。
+ * 列表标题直接使用 html 文件的原始名称（去掉 .html 后缀）。
+ * 若需要自定义标题/科目/日期，可在仓库 html/ 目录放一个 homework.json（可选）。
  */
 
 const OWNER = 'a13621173445';
@@ -188,13 +189,14 @@ h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6
 function renderList(items) {
     const cards = items.map(it => {
         const key = [it.title, it.subject, it.file, it.date].join(' ').toLowerCase();
-        const tag = it.subject
-            ? `<span class="tag">${esc(it.subject)}</span>`
-            : `<span class="tag tag-plain">作业</span>`;
+        const tag = it.subject ? `<span class="tag">${esc(it.subject)}</span>` : '';
+        const meta = [];
+        if (it.file !== it.title) meta.push(`<span>${esc(it.file)}</span>`);
+        if (it.date) meta.push(`<span>${esc(it.date)}</span>`);
         return `<a class="card" href="${esc(it.url)}" data-key="${esc(key)}" target="_blank" rel="noopener">`
             + tag
             + `<h3>${esc(it.title)}</h3>`
-            + `<div class="meta"><span>${esc(it.file)}</span>${it.date ? `<span>${esc(it.date)}</span>` : ''}</div>`
+            + (meta.length ? `<div class="meta">${meta.join('')}</div>` : '')
             + `</a>`;
     }).join('\n');
 

@@ -443,7 +443,8 @@ Cloudflare Pages 默认支持无 `.html` 后缀的 URL。
 | 重置密码 | `/netdisk/reset` | `netdisk/reset.html` |
 | 重置确认 | `/netdisk/reset-confirm` | `netdisk/reset-confirm.html` |
 | 分享文件 | `/netdisk/shared` | `netdisk/shared.html` |
-| 赞助 | `/netdisk/sponsor` | `netdisk/sponsor.html` |
+| 赞助 | `/sponsor` | `functions/sponsor.js`（旧地址 `/netdisk/sponsor` 会自动跳转） |
+| 作业查看 | `/html` | `functions/html/[[path]].js`（列表 + 搜索 + 单个作业 `/html/<原名>.html`） |
 | 用户协议 | `/netdisk/eula` | `netdisk/eula.html` |
 
 ---

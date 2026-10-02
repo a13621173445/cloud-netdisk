@@ -188,7 +188,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 | 账户设置 | `https://frpz.cc/netdisk/account` |
 | 管理后台 | `https://frpz.cc/netdisk/admin` |
 | 重置密码 | `https://frpz.cc/netdisk/reset` |
-| 赞助 | `https://frpz.cc/netdisk/sponsor` |
+| 赞助 | `https://frpz.cc/sponsor` |
+| 作业查看 | `https://frpz.cc/html` |
 
 ## 配置文件说明
 

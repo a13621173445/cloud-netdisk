@@ -97,7 +97,7 @@ async function buildList(env) {
 
     // 读取可选的元数据文件
     let meta = [];
-    const metaEntry = files.find(e => e.name.toLowerCase() === META_FILE);
+    const metaEntry = entries.find(e => e.type === 'file' && e.name.toLowerCase() === META_FILE);
     if (metaEntry) {
         try {
             const parsed = JSON.parse(await fetchRaw(env, `${DIR}/${metaEntry.name}`));

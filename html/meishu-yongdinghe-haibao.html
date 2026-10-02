@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>美术作业 · 永定河水脉调研（A4海报）</title>
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  :root{
+    --ink:#17323f; --sub:#5a6c78; --line:#d6e3ec;
+    --blue:#0f6fa8; --blue-d:#0b4f7a; --blue-l:#eaf5fb;
+    --green:#2e8b57; --green-l:#eaf6ef;
+    --red:#c0392b; --red-l:#fdefed;
+    --gold:#c9922e; --gold-l:#fdf5e5;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:#e8edf1;}
+  body{font-family:"Noto Sans SC","Source Han Sans SC","Microsoft YaHei","PingFang SC",sans-serif; color:var(--ink);}
+  .page{
+    width:210mm; min-height:297mm; margin:0 auto; background:#fff;
+    padding:8mm 9mm 7mm; display:flex; flex-direction:column; gap:3mm;
+    box-shadow:0 6px 24px rgba(20,45,65,.16);
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  /* ===== 页头 ===== */
+  .head{
+    background:linear-gradient(120deg,#0f6fa8 0%,#2a9bc4 55%,#4fc3b0 100%);
+    color:#fff; border-radius:3mm; padding:4mm 5mm 3.6mm; position:relative; overflow:hidden;
+  }
+  .head::after{content:""; position:absolute; right:-16mm; top:-16mm; width:46mm; height:46mm;
+    border:2.6mm solid rgba(255,255,255,.16); border-radius:50%;}
+  .head .tag{font-size:8.4pt; letter-spacing:2.4px; opacity:.92;}
+  .head h1{font-size:23pt; letter-spacing:4px; margin:1mm 0 1mm; font-weight:800;}
+  .head .en{font-size:8pt; letter-spacing:1.4px; opacity:.85;}
+  .head .info{
+    position:absolute; right:5mm; bottom:3.6mm; text-align:right;
+    font-size:8.4pt; line-height:1.5; opacity:.95;
+  }
+  /* ===== 照片条 ===== */
+  .photoband{display:grid; grid-template-columns:repeat(3,1fr); gap:2.4mm;}
+  .photoband figure{position:relative; height:31mm; border-radius:2.4mm; overflow:hidden;
+    border:0.4mm solid var(--line); background:#eef3f6;}
+  .photoband img{display:block; width:100%; height:100%; object-fit:cover;}
+  .photoband figcaption{position:absolute; left:0; right:0; bottom:0; color:#fff;
+    font-size:8pt; line-height:1.35; padding:7mm 2.6mm 1.6mm;
+    background:linear-gradient(to top,rgba(8,30,42,.9),rgba(8,30,42,0));}
+  /* ===== 网格 ===== */
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:3.2mm; flex:1;}
+  .card{border:0.5mm solid var(--line); border-radius:2.4mm; padding:2.8mm 3.2mm; background:#fff;
+    display:flex; flex-direction:column;}
+  .card h2{font-size:11pt; letter-spacing:.6px; display:flex; align-items:center; gap:2mm;
+    padding-bottom:1.6mm; border-bottom:0.4mm solid currentColor; margin-bottom:2mm;}
+  .card h2 .no{
+    width:6.4mm; height:6.4mm; border-radius:50%; background:currentColor; color:#fff;
+    font-size:9pt; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .card.c1{color:var(--blue);}
+  .card.c2{color:var(--gold);}
+  .card.c3{color:var(--red);}
+  .card.c4{color:var(--green);}
+  .card .body{color:var(--ink); font-size:8.6pt; line-height:1.6; flex:1;}
+  .muted{color:var(--sub);}
+  .k{font-weight:700;}
+  /* 卡内配图 */
+  .card-photo{position:relative; height:24mm; border-radius:1.8mm; overflow:hidden;
+    margin-bottom:2mm; border:0.4mm solid var(--line);}
+  .card-photo img{display:block; width:100%; height:100%; object-fit:cover;}
+  .card-photo figcaption{position:absolute; right:0; bottom:0; color:#fff; font-size:7.6pt;
+    padding:5mm 2.4mm 1.2mm; background:linear-gradient(to top,rgba(8,30,42,.85),rgba(8,30,42,0));}
+  /* ===== 1 城市人文 ===== */
+  .tags{display:flex; flex-wrap:wrap; gap:1.4mm; margin-bottom:2mm;}
+  .tags span{background:#fff; border:0.3mm solid #bcdcee; color:var(--blue-d);
+    border-radius:5mm; padding:0.5mm 2.2mm; font-size:8pt;}
+  .tags span.core{background:var(--blue); color:#fff; border-color:var(--blue); font-weight:700;}
+  .line{margin:0 0 1.4mm; padding-left:3.6mm; position:relative;}
+  .line::before{content:""; position:absolute; left:0.6mm; top:1.5mm; width:1.5mm; height:1.5mm;
+    background:var(--blue); border-radius:50%;}
+  /* ===== 2 水的科普 ===== */
+  .band{display:flex; height:9mm; border-radius:1.4mm; overflow:hidden; margin:0.6mm 0 2mm;}
+  .band div{flex:1; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:8.6pt; font-weight:800; letter-spacing:.4px; text-shadow:0 0 2px rgba(0,0,0,.25);}
+  .wq{display:flex; gap:1.6mm; align-items:flex-start; margin-bottom:1.2mm;}
+  .wq b{flex:none; width:9mm; text-align:center; border-radius:1mm; color:#fff;
+    font-size:8.2pt; line-height:1.5; padding:.2mm 0;}
+  .wq p{font-size:8.3pt; line-height:1.45;}
+  .note{margin-top:1.4mm; font-size:8pt; background:var(--gold-l); border-left:1.2mm solid var(--gold);
+    padding:1.2mm 2mm; border-radius:0 1.5mm 1.5mm 0; color:#6a4d10;}
+  /* ===== 3 生态保护 ===== */
+  .pr{border-left:1.2mm solid var(--red); background:var(--red-l); border-radius:0 1.5mm 1.5mm 0;
+    padding:1.3mm 2mm; margin-bottom:1.5mm;}
+  .pr b{color:var(--red);}
+  .pr p{font-size:8.3pt; line-height:1.42;}
+  .harm{background:#fff4f2; border:0.3mm dashed #e2b3ad; border-radius:1.5mm; padding:1.4mm 2mm; font-size:8.2pt; line-height:1.45;}
+  /* ===== 4 水循环 ===== */
+  .cycle{width:100%; height:auto; display:block; border-radius:1.5mm;}
+  .legend{display:flex; gap:2.4mm; flex-wrap:wrap; font-size:8pt; margin-top:1.6mm;}
+  .legend b{display:inline-flex; align-items:center; gap:1mm;}
+  .dot{width:2.2mm; height:2.2mm; border-radius:50%; display:inline-block;}
+  /* ===== 页脚 ===== */
+  .foot{border-top:0.4mm solid var(--line); padding-top:1.8mm; font-size:7.2pt; color:var(--sub); line-height:1.5;}
+  .foot b{color:#3d4d58;}
+  @media print{
+    html,body{background:#fff;}
+    .page{box-shadow:none; margin:0; width:210mm; min-height:297mm;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 页头 -->
+  <div class="head">
+    <div class="tag">美术作业 · 家乡的水</div>
+    <h1>永定河水脉调研</h1>
+    <div class="en">YONGDING RIVER · WATER VEIN SURVEY</div>
+    <div class="info">初二三班　董璐辰<br>2026.10.01</div>
+  </div>
+
+  <!-- 照片条 -->
+  <div class="photoband">
+    <figure>
+      <img src="assets/lugouqiao.jpg" alt="卢沟桥石桥">
+      <figcaption>卢沟桥 · 永定河上的古桥</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/wanping-wall.jpg" alt="宛平城墙上的弹痕">
+      <figcaption>宛平城墙 · 弹痕犹在</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/war-museum.jpg" alt="中国人民抗日战争纪念馆">
+      <figcaption>中国人民抗日战争纪念馆</figcaption>
+    </figure>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1 城市人文 -->
+    <div class="card c1">
+      <h2><span class="no">1</span>城市人文 · 沿线的建筑与公园</h2>
+      <div class="body">
+        <div class="tags">
+          <span class="core">卢沟桥</span><span class="core">宛平城</span><span class="core">园博园</span>
+          <span>卢沟桥文化公园</span><span>冬奥公园</span><span>首钢园</span>
+          <span>莲石湖湿地公园</span><span>门头沟永定河文化带</span><span>官厅水库</span>
+          <span>天津三岔河口</span>
+        </div>
+        <p class="line"><span class="k">丰台段：</span>永定河流经丰台约 11.3 公里，河畔串起卢沟桥、宛平城、中国人民抗日战争纪念馆，"馆桥城园岛河"连成一片。</p>
+        <p class="line"><span class="k">石景山段：</span>首钢园、园博园与永定河组成"两园一河"，莲石湖、冬奥公园成为沿河新地标。</p>
+        <p class="line"><span class="k">从山到海：</span>上游官厅水库，中游北京城区段，下游经河北、天津汇入海河，最终注入渤海。</p>
+      </div>
+    </div>
+
+    <!-- 2 水的科普 -->
+    <div class="card c2">
+      <h2><span class="no">2</span>水的科普 · 地表水水质分类</h2>
+      <div class="body">
+        <div class="band">
+          <div style="background:#2e9e5b;">Ⅰ</div>
+          <div style="background:#7bc043;">Ⅱ</div>
+          <div style="background:#f2c14e;">Ⅲ</div>
+          <div style="background:#ef8c3c;">Ⅳ</div>
+          <div style="background:#d64545;">Ⅴ</div>
+          <div style="background:#6b3fa0;">劣Ⅴ</div>
+        </div>
+        <div class="wq"><b style="background:#2e9e5b;">Ⅰ类</b><p>优：源头水、国家自然保护区。</p></div>
+        <div class="wq"><b style="background:#7bc043;">Ⅱ类</b><p>优：集中式饮用水一级保护区、珍稀水生生物栖息地、鱼虾产卵场。</p></div>
+        <div class="wq"><b style="background:#e0ad3a;">Ⅲ类</b><p>良好：集中式饮用水二级保护区、鱼虾越冬场与洄游通道、游泳区。</p></div>
+        <div class="wq"><b style="background:#ef8c3c;">Ⅳ类</b><p>轻度污染：一般工业用水区、人体非直接接触的娱乐用水区。</p></div>
+        <div class="wq"><b style="background:#d64545;">Ⅴ类</b><p>中度污染：农业用水区及一般景观用水区。</p></div>
+        <div class="wq"><b style="background:#6b3fa0;">劣Ⅴ类</b><p>重度污染：水质已基本丧失使用功能。</p></div>
+        <div class="note">依据《地表水环境质量标准》（GB3838—2002）；数字越大水质越差。如今永定河北京段干流健康水体比例已达 100%，水质达Ⅲ类标准。</div>
+      </div>
+    </div>
+
+    <!-- 3 生态保护 -->
+    <div class="card c3">
+      <h2><span class="no">3</span>生态保护 · 哪些活动会伤害它</h2>
+      <div class="body">
+        <figure class="card-photo">
+          <img src="assets/yongding-river.jpg" alt="永定河水面与堤岸">
+          <figcaption>永定河水面 · 需要我们共同守护</figcaption>
+        </figure>
+        <div class="pr"><p><b>工业废水偷排</b> → 重金属、有毒有机物超标，水体发黑发臭。</p></div>
+        <div class="pr"><p><b>生活污水直排</b> → 氮磷升高，藻类疯长，出现"水华"。</p></div>
+        <div class="pr"><p><b>化肥农药、畜禽养殖</b> → 面源污染，富营养化，鱼虾缺氧死亡。</p></div>
+        <div class="pr"><p><b>乱倒垃圾、野炊烧烤、露营留弃物</b> → 河道脏乱、塑料垃圾缠住水鸟鱼虾。</p></div>
+        <div class="pr"><p><b>非法采砂、河道违建、过度取水</b> → 河床被破坏、湿地萎缩，甚至断流。</p></div>
+        <div class="harm"><b>造成的伤害：</b>水质下降、水生物死亡、生物多样性减少、湿地退化，还会威胁饮用水源与防洪安全。<br><b>我能做：</b>不乱扔垃圾、不野泳野炊、发现排污及时举报，做永定河的守护者。</div>
+      </div>
+    </div>
+
+    <!-- 4 水循环 -->
+    <div class="card c4">
+      <h2><span class="no">5</span>水循环 · 自然界的水怎么走</h2>
+      <div class="body">
+        <svg class="cycle" viewBox="0 0 380 196" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#e3f2fb"/><stop offset="1" stop-color="#f7fcfe"/>
+            </linearGradient>
+            <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7fc3e3"/><stop offset="1" stop-color="#3f8db8"/>
+            </linearGradient>
+            <linearGradient id="land" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#a9d99b"/><stop offset="1" stop-color="#6fae63"/>
+            </linearGradient>
+            <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#2c7fb0"/>
+            </marker>
+            <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#2e8b57"/>
+            </marker>
+          </defs>
+
+          <rect x="0" y="0" width="380" height="196" fill="url(#sky)" rx="6"/>
+          <!-- 太阳 -->
+          <circle cx="336" cy="30" r="14" fill="#ffd166"/>
+          <g stroke="#ffd166" stroke-width="2" stroke-linecap="round">
+            <line x1="336" y1="8" x2="336" y2="1"/><line x1="336" y1="52" x2="336" y2="59"/>
+            <line x1="314" y1="30" x2="307" y2="30"/><line x1="358" y1="30" x2="365" y2="30"/>
+          </g>
+          <!-- 云 -->
+          <g fill="#ffffff" opacity="0.95">
+            <ellipse cx="118" cy="42" rx="26" ry="13"/><ellipse cx="140" cy="36" rx="18" ry="11"/>
+            <ellipse cx="252" cy="34" rx="22" ry="11"/><ellipse cx="270" cy="30" rx="15" ry="9"/>
+          </g>
+          <!-- 降水 -->
+          <g stroke="#2c7fb0" stroke-width="1.6" stroke-dasharray="3 3" marker-end="url(#ar)">
+            <line x1="108" y1="56" x2="104" y2="82"/>
+            <line x1="128" y1="56" x2="124" y2="82"/>
+            <line x1="246" y1="50" x2="243" y2="74"/>
+          </g>
+          <!-- 水汽输送 -->
+          <path d="M148,36 C186,14 214,20 236,28" fill="none" stroke="#2c7fb0" stroke-width="1.8" marker-end="url(#ar)"/>
+          <!-- 海洋 -->
+          <path d="M0,140 L150,140 L150,196 L0,196 Z" fill="url(#sea)"/>
+          <!-- 陆地 -->
+          <path d="M150,140 L380,140 L380,196 L150,196 Z" fill="url(#land)"/>
+          <path d="M150,140 L200,96 L246,140 Z" fill="#8cc47e"/>
+          <path d="M232,140 L286,88 L344,140 Z" fill="#7bb96e"/>
+          <!-- 河 -->
+          <path d="M300,104 C272,118 262,124 238,138 C214,152 196,150 172,146" fill="none" stroke="#3f8db8" stroke-width="4" stroke-linecap="round"/>
+          <!-- 地表径流箭头 -->
+          <path d="M286,112 C264,124 246,132 226,142" fill="none" stroke="#2c7fb0" stroke-width="1.4" marker-end="url(#ar)"/>
+          <!-- 下渗 / 地下径流 -->
+          <g stroke="#3a6b52" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar2)">
+            <line x1="250" y1="150" x2="250" y2="170"/>
+            <line x1="238" y1="176" x2="182" y2="176"/>
+          </g>
+          <!-- 蒸发箭头 -->
+          <g stroke="#2c7fb0" stroke-width="1.6" marker-end="url(#ar)">
+            <line x1="34" y1="138" x2="34" y2="104"/>
+            <line x1="70" y1="138" x2="70" y2="112"/>
+            <line x1="104" y1="138" x2="104" y2="104"/>
+          </g>
+          <!-- 树 -->
+          <rect x="196" y="128" width="4" height="12" fill="#8a6b46"/>
+          <circle cx="198" cy="124" r="9" fill="#3f9a54"/>
+          <!-- 蒸腾箭头 -->
+          <line x1="198" y1="114" x2="198" y2="94" stroke="#2e8b57" stroke-width="1.6" marker-end="url(#ar2)"/>
+          <!-- 文字 -->
+          <g font-family="Noto Sans SC, Microsoft YaHei, sans-serif" font-size="9" fill="#17323f">
+            <text x="14" y="180">海洋</text>
+            <text x="352" y="180">陆地</text>
+            <text x="12" y="98">蒸发</text>
+            <text x="178" y="90">蒸腾</text>
+            <text x="150" y="30">水汽输送</text>
+            <text x="132" y="74">降水</text>
+            <text x="252" y="136" fill="#1b5e8a">地表径流</text>
+            <text x="196" y="186" fill="#2b5d45">地下径流</text>
+            <text x="258" y="168" fill="#2b5d45">下渗</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <b><span class="dot" style="background:#2c7fb0;"></span>海陆间循环（大循环）</b>
+          <b><span class="dot" style="background:#2e8b57;"></span>陆地内循环</b>
+          <b><span class="dot" style="background:#3f8db8;"></span>海上内循环</b>
+        </div>
+        <p style="font-size:8.2pt; margin-top:1.4mm;" class="muted">海洋水汽→降水→径流→回归海洋，循环往复；永定河也是这条大循环中的一环。</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <b>资料来源：</b>《地表水环境质量标准》（GB3838—2002）｜北京市水务局（永定河生态补水与水质数据）｜北京市人民政府"两园一河"建设报道｜石景山区政府（莲石湖湿地公园）｜人民网 · 中国共产党新闻网。<br>
+    <b>图片来源：</b>维基共享资源（Wikimedia Commons）自由许可图片，仅用于学校作业：卢沟桥、中国人民抗日战争纪念馆，摄影 Fanghong（CC BY-SA 3.0）；宛平城墙弹痕、永定河，摄影 rheins（CC BY 3.0）。图片版权归原作者所有。<br>
+    <b>制作者：</b>初二三班　董璐辰　<b>日期：</b>2026.10.01
+  </div>
+
+</div>
+</body>
+</html>

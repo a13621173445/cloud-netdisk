@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>历史小报 · 永定河溯源</title>
+<style>
+  :root{
+    --ink:#1f2d38; --sub:#5c6b78; --line:#e0e7ed;
+    --blue:#1a6a96; --blue-2:#2b8fbf; --blue-soft:#f0f7fb;
+    --red:#b3272d; --red-soft:#fdf4f4;
+    --gold:#b8873f;
+  }
+  *{box-sizing:border-box;}
+  html,body{background:#e9edf1;}
+  body{
+    margin:0; padding:30px 16px 56px; color:var(--ink);
+    font-family:"Noto Sans SC","Source Han Sans SC","Microsoft YaHei","PingFang SC",sans-serif;
+    line-height:1.85;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .sheet{
+    max-width:1080px; margin:0 auto; background:#fff;
+    border:1px solid #d6dde3; border-radius:10px;
+    box-shadow:0 10px 34px rgba(24,46,66,.13);
+    padding:26px 30px 34px;
+  }
+  img{display:block; width:100%; height:100%; object-fit:cover;}
+  figure{margin:0;}
+
+  /* ===== 主视觉（报头） ===== */
+  .hero{
+    position:relative; height:280px; border-radius:10px; overflow:hidden;
+    background:#12303f; margin-bottom:24px;
+  }
+  .hero::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(105deg,rgba(10,32,46,.86) 0%,rgba(10,32,46,.62) 42%,rgba(10,32,46,.12) 78%);
+  }
+  .hero img{object-position:center 62%;}
+  .hero-text{position:absolute; left:30px; top:50%; transform:translateY(-50%); z-index:2; color:#fff;}
+  .hero-text .kicker{
+    font-size:12px; letter-spacing:2.5px; color:#a9d8ef; margin-bottom:10px;
+    padding-left:2px;
+  }
+  .hero-text h1{
+    margin:0; font-size:44px; letter-spacing:8px; font-weight:800; line-height:1.15;
+    font-family:"Noto Serif SC","Source Han Serif SC","Songti SC",SimSun,serif;
+    text-shadow:0 2px 12px rgba(0,0,0,.35);
+  }
+  .hero-text h1 small{
+    font-size:15px; letter-spacing:3px; font-weight:600; color:#f0d9a8;
+    margin-left:12px; font-family:inherit; vertical-align:middle;
+  }
+  .hero-text .sub{margin:12px 0 0; font-size:13.5px; letter-spacing:1.5px; color:#dbe9f2;}
+  .hero-badge{
+    position:absolute; right:22px; top:22px; z-index:2;
+    background:rgba(255,255,255,.92); border-radius:8px; padding:9px 15px;
+    text-align:center; font-size:11.5px; color:#3b5666; line-height:1.5;
+  }
+  .hero-badge b{display:block; font-size:14px; color:var(--blue); letter-spacing:.5px;}
+  .hero figcaption{
+    position:absolute; right:0; bottom:0; z-index:2;
+    background:rgba(10,32,46,.62); color:#cfe2ee;
+    font-size:11px; padding:5px 12px; border-top-left-radius:8px;
+  }
+
+  /* ===== 图说 ===== */
+  .feature{
+    border:1px solid var(--line); border-radius:9px; padding:15px 16px 16px;
+    margin-bottom:22px; background:#fbfdfe;
+  }
+  .feature > h2{
+    margin:0 0 12px; font-size:17px; letter-spacing:1px; color:var(--blue);
+    display:flex; align-items:center; gap:9px;
+  }
+  .feature > h2::before{content:""; width:6px; height:19px; background:var(--blue); border-radius:2px;}
+  .photos{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+  .photos figure{
+    position:relative; height:158px; border-radius:7px; overflow:hidden;
+    border:1px solid #d5e2ea; background:#eef3f6;
+  }
+  .photos figcaption{
+    position:absolute; left:0; right:0; bottom:0;
+    background:linear-gradient(to top,rgba(8,28,40,.88),rgba(8,28,40,0));
+    color:#fff; font-size:11.5px; line-height:1.4; padding:20px 9px 7px;
+  }
+
+  /* ===== 分栏 ===== */
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;}
+  .col{display:flex; flex-direction:column; gap:18px;}
+  section{border:1px solid var(--line); border-radius:8px; padding:15px 17px 17px; background:#fff;}
+  section.red{border-color:#eed4d4; background:var(--red-soft);}
+  section.blue{border-color:#d3e6f1; background:var(--blue-soft);}
+  h2{
+    margin:0 0 11px; font-size:17px; letter-spacing:1px; color:var(--blue);
+    display:flex; align-items:center; gap:9px;
+  }
+  h2::before{content:""; width:6px; height:19px; background:var(--blue); border-radius:2px; display:inline-block;}
+  section.red h2{color:var(--red);}
+  section.red h2::before{background:var(--red);}
+  p{margin:0 0 10px; font-size:14.5px;}
+  p:last-child{margin-bottom:0;}
+  .hl{color:var(--red); font-weight:700;}
+  .hlb{color:var(--blue); font-weight:700;}
+
+  /* ===== 名称演变 ===== */
+  .names{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 12px;}
+  .names span{
+    background:#fff; border:1px solid #d3e3ee; border-radius:20px;
+    padding:3px 13px; font-size:13.5px; color:#225c7c;
+  }
+  .names span.now{background:var(--blue); color:#fff; border-color:var(--blue); font-weight:700;}
+
+  /* ===== 时间轴 ===== */
+  .timeline{position:relative; margin-top:6px; padding-left:22px;}
+  .timeline::before{content:""; position:absolute; left:6px; top:6px; bottom:6px; width:2px; background:#cfe0ec;}
+  .tl-item{position:relative; margin-bottom:12px; font-size:14px;}
+  .tl-item::before{
+    content:""; position:absolute; left:-21px; top:7px; width:9px; height:9px;
+    border-radius:50%; background:var(--blue); border:2px solid #fff; box-shadow:0 0 0 2px #cfe0ec;
+  }
+  .tl-item.crisis::before{background:var(--red); box-shadow:0 0 0 2px #eed3d3;}
+  .tl-item.green::before{background:#2e8b57; box-shadow:0 0 0 2px #cfe8d8;}
+  .tl-item b{color:var(--blue);}
+  .tl-item.crisis b{color:var(--red);}
+
+  /* ===== 数据条 ===== */
+  .stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:6px 0 12px;}
+  .stat{background:#fff; border:1px solid #d7e6ef; border-radius:7px; padding:10px 12px; text-align:center;}
+  .stat b{display:block; font-size:21px; color:var(--blue); letter-spacing:.5px;}
+  .stat span{font-size:12.5px; color:var(--sub);}
+
+  /* ===== 文内配图 ===== */
+  .inline-pic{border-radius:7px; overflow:hidden; border:1px solid #d5e2ea; margin:4px 0 12px;}
+  .inline-pic figure{position:relative; height:150px;}
+  .inline-pic figcaption{
+    position:absolute; left:0; right:0; bottom:0; padding:16px 10px 6px;
+    background:linear-gradient(to top,rgba(8,28,40,.86),rgba(8,28,40,0));
+    color:#fff; font-size:11.5px;
+  }
+
+  /* ===== 红色资源卡片 ===== */
+  .spots{display:grid; grid-template-columns:1fr 1fr; gap:11px;}
+  .spot{background:#fff; border:1px solid #eed4d4; border-left:4px solid var(--red); border-radius:7px; padding:11px 13px;}
+  .spot h3{margin:0 0 6px; font-size:15px; color:var(--red); letter-spacing:.5px; display:flex; align-items:center; gap:6px;}
+  .spot h3 .n{
+    flex:none; width:17px; height:17px; border-radius:50%; background:var(--red); color:#fff;
+    font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:700;
+  }
+  .spot p{font-size:13.5px; margin:0; color:#3c4b5a;}
+
+  /* ===== 页脚 ===== */
+  footer{margin-top:24px; padding-top:14px; border-top:1px solid var(--line); font-size:12.5px; color:var(--sub);}
+  footer b{color:#42505d;}
+  footer ol{margin:6px 0 0; padding-left:20px;}
+  footer a{color:var(--blue); text-decoration:none;}
+  .credits{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); font-size:12px; line-height:1.7;}
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr;}
+    .photos{grid-template-columns:repeat(2,1fr);}
+    .spots{grid-template-columns:1fr;}
+    .hero{height:230px;}
+    .hero-text h1{font-size:32px; letter-spacing:4px;}
+  }
+  @media print{
+    html,body{background:#fff;}
+    body{padding:0;}
+    .sheet{box-shadow:none; border:none; max-width:100%; padding:0;}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- ===== 主视觉 ===== -->
+  <figure class="hero">
+    <img src="assets/yongding-river.jpg" alt="永定河北京段水面与堤岸">
+    <div class="hero-text">
+      <div class="kicker">北京市丰台区 · 永定河沿线红色文化研学</div>
+      <h1>永定河溯源<small>历史小报</small></h1>
+      <p class="sub">一条大河的名字 · 一段河流的记忆 · 一城红色的血脉</p>
+    </div>
+    <div class="hero-badge"><b>丰台段 11.3 公里</b>馆 · 桥 · 城 · 园 · 岛 · 河</div>
+    <figcaption>永定河北京段水面（摄于 2011 年 9 月）｜ 摄影：rheins / Wikimedia Commons, CC BY 3.0</figcaption>
+  </figure>
+
+  <!-- ===== 图说 ===== -->
+  <section class="feature">
+    <h2>图说 · 河畔的红色印记</h2>
+    <div class="photos">
+      <figure>
+        <img src="assets/lugouqiao.jpg" alt="卢沟桥">
+        <figcaption>卢沟桥<br>十一孔联拱石桥（2011 年摄，桥下可见当年干涸的河床）</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/wanping-wall.jpg" alt="宛平城墙上的弹痕">
+        <figcaption>宛平城墙上的弹痕<br>1937 年七七事变留下的历史印记</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/war-museum.jpg" alt="中国人民抗日战争纪念馆">
+        <figcaption>中国人民抗日战争纪念馆<br>坐落在宛平城内、卢沟桥东</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/changxindian.jpg" alt="长辛店二七公园南门">
+        <figcaption>长辛店二七公园<br>京汉铁路工人大罢工的纪念地</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- ===== 左栏 ===== -->
+    <div class="col">
+
+      <section>
+        <h2>一、名字的由来：从"无定"到"永定"</h2>
+        <p>永定河古称众多，因不同河段、不同朝代而变换名称，是北京地区名称变化最多的一条河。</p>
+        <div class="names">
+          <span>㶟水（最早）</span>
+          <span>清泉河</span>
+          <span>桑乾河</span>
+          <span>卢沟河</span>
+          <span>浑河</span>
+          <span>小黄河</span>
+          <span>无定河</span>
+          <span class="now">永定河</span>
+        </div>
+        <p>它上游称桑乾河，中下游因水色浑浊被称为"浑河""小黄河"；又因河道迁徙无常、泛滥成灾，得名<span class="hl">"无定河"</span>。</p>
+        <p>清<span class="hl">康熙三十七年（1698年）</span>，直隶巡抚于成龙奉旨从卢沟桥以下筑堤、疏浚下游一百四十五里，水患渐平。于成龙上书请求赐名建庙，康熙遂下旨："赐名永定河，建庙立碑"，取<span class="hlb">"永世太平、岁岁安澜"</span>之意。"永定河"之名沿用至今。</p>
+      </section>
+
+      <section class="blue">
+        <h2>二、源起何处：一条流经五省区市的大河</h2>
+        <p><b>源头：</b>发源于山西省宁武县的桑干河与内蒙古自治区兴和县的洋河，两源汇合后始称永定河。</p>
+        <p><b>流向：</b>流经内蒙古、山西、河北、北京、天津五省区市，在天津汇入海河、注入渤海，全长约 <b>747 公里</b>。</p>
+        <p><b>北京段：</b>长约 170 公里，流域面积 3168 平方公里，流经门头沟、石景山、丰台、房山、大兴等区。</p>
+        <p><b>丰台段：</b>永定河自北向南经石景山流入丰台，长约 <span class="hlb">11.3 公里</span>，将丰台区分为东西两部，是丰台三大水系之一。</p>
+      </section>
+
+      <section>
+        <h2>三、千年变迁：从泛滥到断流，再到复苏</h2>
+        <div class="timeline">
+          <div class="tl-item crisis"><b>古代 · 泛滥期</b>　河道"善淤、善决、善徙"，屡次决口改道；元明清三朝均重点治理。</div>
+          <div class="tl-item crisis"><b>1995—1996年 · 断流</b>　因连年干旱与用水增加，1995年前后最后一次全线通水，1996年起长期断流，河床裸露、黄沙遍布。</div>
+          <div class="tl-item"><b>2010年 · 生态修复起步</b>　陆续对宛平湖、园博湖等河段开展生态修复。</div>
+          <div class="tl-item green"><b>2019年 · 生态补水初期</b>　水利部海河水利委员会组织京津冀晋四省市统一调度，黄河万家寨、册田、友谊等水库向官厅水库调水 2.7 亿立方米；山峡段 108 公里全线流动。</div>
+          <div class="tl-item green"><b>2020年 · 北京段全线贯通</b>　官厅水库生态补水出库 1.66 亿立方米，水头到达天津武清，官厅水库以下形成 248 公里连续水路，断流 25 年的北京段全线贯通。</div>
+          <div class="tl-item green"><b>2021年 · 全线贯通入海</b>　断流 26 年后，865 公里河道首次实现全线水流贯通入海。</div>
+          <div class="tl-item green"><b>2023—2025年 · 全年有水</b>　2023 年首次实现全年全线有水；至 2025 年底已连续 3 年实现全年全线有水。</div>
+        </div>
+      </section>
+
+      <section class="blue">
+        <h2>四、今日永定河：绿色答卷</h2>
+        <div class="inline-pic">
+          <figure>
+            <img src="assets/yongdingta.jpg" alt="北京园博园永定塔">
+            <figcaption>永定塔 · 北京园博园地标，立于永定河畔（2018 年摄）</figcaption>
+          </figure>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>30 亿 m³</b><span>2019—2025 累计生态补水</span></div>
+          <div class="stat"><b>1800 公顷</b><span>北京段形成水面</span></div>
+          <div class="stat"><b>Ⅲ 类</b><span>北京段水质标准</span></div>
+          <div class="stat"><b>5.24 米</b><span>地下水位平均回升</span></div>
+        </div>
+        <p>此外，沿线累计新增湿地 424 公顷、造林 19 万亩；记录高等植物 375 种、鱼类 40 种，官厅水库等重点区域鸟类达 348 种，黑鹳等珍稀鸟类回归。冬奥公园、首钢园、卢沟桥成为热门打卡地，"断流的大河"重新流淌起生机。</p>
+      </section>
+
+    </div>
+
+    <!-- ===== 右栏 ===== -->
+    <div class="col">
+
+      <section class="red">
+        <h2>五、河畔的红色记忆：丰台永定河沿线资源</h2>
+        <div class="spots">
+          <div class="spot">
+            <h3><span class="n">1</span>卢沟桥</h3>
+            <p>始建于金代 1188 年，华北现存最古老最长的十一孔联拱石桥，桥上石狮 501 尊。1937 年 7 月 7 日"七七事变"在此爆发，吹响全民族抗战的号角。</p>
+          </div>
+          <div class="spot">
+            <h3><span class="n">2</span>宛平城</h3>
+            <p>建于明代，华北地区唯一保存完整的两开门卫城。1937 年七七事变时遭日军炮轰，城墙上至今留有密集弹孔，是国家级抗战纪念活动承载地。</p>
+          </div>
+          <div class="spot">
+            <h3><span class="n">3</span>中国人民抗日战争纪念馆</h3>
+            <p>坐落于宛平城内、卢沟桥东，1987 年 7 月 7 日（七七事变 50 周年）正式开放。是全国唯一全面反映中国人民抗日战争历史的大型综合性专题纪念馆。</p>
+          </div>
+          <div class="spot">
+            <h3><span class="n">4</span>长辛店二七纪念馆</h3>
+            <p>1987 年 2 月 7 日开放。纪念 1923 年京汉铁路工人大罢工（"二七大罢工"）。长辛店是北方工人运动的摇篮，被誉为"北方的红星"。</p>
+          </div>
+          <div class="spot">
+            <h3><span class="n">5</span>长辛店"小红楼"</h3>
+            <p>1918 年建成的两层法式小楼，因形似北大红楼而得名。原为留法勤工俭学预备班旧址，毛泽东曾于 1918、1919 年两次到此看望湖南学子。</p>
+          </div>
+          <div class="spot">
+            <h3><span class="n">6</span>长辛店劳动补习学校旧址</h3>
+            <p>1921 年 1 月开学，李大钊、邓中夏等任教，以"工人是天"启蒙工人，被视为中国工人运动最早的火种之一。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>六、寻访手记 · 我的感悟</h2>
+        <p>沿着永定河一路走来，我看到的是一条河的"前世今生"：它曾因水患无常被叫作"无定河"，也曾因断流而沉寂多年；而今天，它重新奔流，两岸绿意盎然。</p>
+        <p>更让我难忘的是河畔的红色印记——卢沟桥上第一声抗战枪响，长辛店工人运动的第一簇火种。一条河，见证了中华民族从苦难走向奋起，也见证了我们守护家园、守护和平的决心。</p>
+        <p>作为新时代的中学生，我愿像守护这条河一样，守护来之不易的和平，把红色的记忆与绿色的希望一起传承下去。</p>
+      </section>
+
+      <section class="blue">
+        <h2>七、小报制作信息</h2>
+        <p><b>主题：</b>永定河溯源——地名由来、河流变迁与丰台红色文化资源</p>
+        <p><b>研学路线建议：</b>卢沟桥 → 宛平城 → 中国人民抗日战争纪念馆 → 长辛店劳动补习学校旧址 → 长辛店"小红楼" → 长辛店二七纪念馆</p>
+        <p><b>班级：</b>初二三班　<b>姓名：</b>董璐辰　<b>日期：</b>2026.10.01</p>
+      </section>
+
+    </div>
+  </div>
+
+  <footer>
+    <b>资料来源（政府官网 / 官媒 / 党史地方志，可核对）：</b>
+    <ol>
+      <li>北京市水务局：《断流25年后，永定河北京段全线贯通》等系列报道，swj.beijing.gov.cn</li>
+      <li>北京市水务局：《永定河连续3年实现全年全线有水》，2026-01</li>
+      <li>北京市人大常委会：《永定河名称的由来》，bjrd.gov.cn，2025-07</li>
+      <li>水利部海河水利委员会：永定河历史沿革，hwcc.gov.cn</li>
+      <li>北京市人民政府：《丰台概况》，beijing.gov.cn</li>
+      <li>丰台区人民政府：《丰台时报》及区内红色文化资源专题报道，bjft.gov.cn</li>
+      <li>人民网 · 中国共产党新闻网：长辛店二七纪念馆、留法勤工俭学预备班旧址介绍</li>
+      <li>新华网：《永定河865公里河道全线通水入海》，2022-06</li>
+    </ol>
+    <p class="credits">
+      <b>图片来源：</b>全部来自维基共享资源（Wikimedia Commons）自由许可图片，仅用于学校作业：永定河、宛平城墙弹痕，摄影 rheins（CC BY 3.0）；卢沟桥、中国人民抗日战争纪念馆，摄影 Fanghong（CC BY-SA 3.0）；永定塔、长辛店二七公园南门，摄影 N509FZ（CC BY-SA 4.0）。图片版权归原作者所有。
+    </p>
+    <p style="margin-top:8px;">注：永定河全长有 747 公里（北京市水务局口径）与 759 公里等不同说法，本小报采用水务局口径；北京段流经区县以水务局口径为准。</p>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -4,10 +4,10 @@
  * AGPL-3.0
  *
  * 路由：
- *   GET /html 或 /html/          → 作业列表页（带搜索框）
+ *   GET /html 或 /html/          → HTML 列表页（带搜索框）
  *   GET /html/<file>.html        → 查看单个作业
  *   GET /html/<file>             → 同上（自动补 .html）
- *   GET /html/list.json          → 作业列表 JSON
+ *   GET /html/list.json          → HTML 列表 JSON
  *
  * 内容来源：GitHub 仓库的 html/ 目录（Contents API）。
  * 把新的 .html 文件放进仓库 html/ 目录并 push，无需改代码就会自动出现在列表里。
@@ -277,7 +277,7 @@ function renderNotice(title, message, status) {
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="/">frpz.cc</a>
-    <a class="back" href="/html">作业列表</a>
+    <a class="back" href="/html">HTML 列表</a>
   </div>
 </header>
 <main class="wrap">
@@ -310,12 +310,12 @@ export async function onRequest(context) {
             const items = await getList(env);
             return html(renderList(items), 200, LIST_TTL);
         } catch (e) {
-            return renderNotice('加载失败', `作业列表暂时无法加载：<code>${esc(e.message)}</code><br><br>请稍后刷新重试。`, 500);
+            return renderNotice('加载失败', `HTML 列表暂时无法加载：<code>${esc(e.message)}</code><br><br>请稍后刷新重试。`, 500);
         }
     }
 
     if (!path.startsWith(PREFIX)) {
-        return renderNotice('页面不存在', '请从 <a href="/html" style="color:#0071e3">作业列表</a> 进入。', 404);
+        return renderNotice('页面不存在', '请从 <a href="/html" style="color:#0071e3">HTML 列表</a> 进入。', 404);
     }
 
     let name = path.slice(PREFIX.length);
@@ -331,7 +331,7 @@ export async function onRequest(context) {
 
     // 安全检查：只允许单层文件名
     if (!name || name.includes('/') || name.includes('\\') || name.includes('..')) {
-        return renderNotice('页面不存在', '请从 <a href="/html" style="color:#0071e3">作业列表</a> 进入。', 404);
+        return renderNotice('页面不存在', '请从 <a href="/html" style="color:#0071e3">HTML 列表</a> 进入。', 404);
     }
 
     // 允许省略 .html 后缀
@@ -340,7 +340,7 @@ export async function onRequest(context) {
     try {
         const items = await getList(env);
         if (!items.some(it => it.file === name)) {
-            return renderNotice('作业不存在', `没有找到 <code>${esc(name)}</code>，它可能已被删除或重命名。<br><br>返回 <a href="/html" style="color:#0071e3">作业列表</a>。`, 404);
+            return renderNotice('作业不存在', `没有找到 <code>${esc(name)}</code>，它可能已被删除或重命名。<br><br>返回 <a href="/html" style="color:#0071e3">HTML 列表</a>。`, 404);
         }
         const content = await fetchRaw(env, `${DIR}/${name}`);
         return html(content, 200, PAGE_TTL);

@@ -1,5 +1,5 @@
 /**
- * Cloud Netdisk - 作业查看（/html）
+ * Cloud Netdisk - HTML查看（/html）
  * Copyright (C) 2026 a13621173445
  * AGPL-3.0
  *
@@ -205,7 +205,7 @@ function renderList(items) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>作业查看 - frpz.cc</title>
+<title>HTML查看 - frpz.cc</title>
 <style>${STYLE}</style>
 </head>
 <body>
@@ -216,7 +216,7 @@ function renderList(items) {
   </div>
 </header>
 <main class="wrap">
-  <h1>作业查看</h1>
+  <h1>HTML查看</h1>
   <p class="sub">共 ${items.length} 份作业 · 点击卡片在新标签页打开</p>
   <div class="searchbar">
     <input id="hw-search" type="search" placeholder="搜索作业标题、科目或文件名" autocomplete="off">
@@ -282,7 +282,7 @@ function renderNotice(title, message, status) {
 </header>
 <main class="wrap">
   <h1>${esc(title)}</h1>
-  <p class="sub">作业查看</p>
+  <p class="sub">HTML查看</p>
   <div class="errorbox">${message}</div>
 </main>
 </body>

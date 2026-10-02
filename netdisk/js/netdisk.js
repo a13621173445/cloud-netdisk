@@ -541,9 +541,8 @@ const Netdisk = {
         const safeName = sanitizeFilename(file.name);
         const filePath = `${CONFIG.STORAGE_DIR}/${fileId}_${safeName}`;
 
-        // 转为 Base64 并上传
-        const base64Content = await fileToBase64(file);
-        await GitHubAPI.createOrUpdateFile(filePath, base64Content, `上传文件: ${file.name}`, null);
+        // 上传到对象存储（同源代理，服务端完成 S3 签名）
+        await StorageAPI.upload(filePath, file);
 
         // 记录文件元数据
         const fileMeta = {
@@ -671,9 +670,8 @@ const Netdisk = {
             // 忽略计数失败
         }
 
-        // 使用 raw URL 下载
-        const rawUrl = GitHubAPI.getRawUrl(file.path);
-        return { url: rawUrl, name: file.name, type: file.type };
+        // 通过对象存储代理下载
+        return { url: StorageAPI.downloadUrl(file.path, file.name), name: file.name, type: file.type };
     },
 
     // ============ 删除文件 ============
@@ -691,11 +689,8 @@ const Netdisk = {
 
         if (!deletedFile) throw new Error('文件不存在或无权操作');
 
-        // 删除存储的文件
-        const fileInfo = await GitHubAPI.getContent(deletedFile.path);
-        if (fileInfo) {
-            await GitHubAPI.deleteFile(deletedFile.path, `删除文件: ${deletedFile.name}`, fileInfo.sha);
-        }
+        // 删除对象存储中的文件
+        await StorageAPI.remove(deletedFile.path).catch(() => {});
 
         // 删除文件元数据
         await GitHubAPI.updateJsonData(
@@ -724,15 +719,11 @@ const Netdisk = {
         const source = files.find(f => f.id === fileId && f.ownerId === currentUser.id);
         if (!source) throw new Error('文件不存在或无权操作');
 
-        // 读取源文件内容
-        const content = await GitHubAPI.getContent(source.path);
-        if (!content) throw new Error('读取文件内容失败');
-
-        // 复制到公共存储（独立副本，不受原文件删除影响）
+        // 复制到公共存储（服务端对象复制，独立副本，不受原文件删除影响）
         const publicId = generateId();
         const safeName = sanitizeFilename(source.name);
         const publicPath = `${CONFIG.PUBLIC_STORAGE_DIR}/${publicId}_${safeName}`;
-        await GitHubAPI.createOrUpdateFile(publicPath, content.content, `公共分享: ${source.name}`, null);
+        await StorageAPI.copy(source.path, publicPath);
 
         // 创建公共文件记录
         const publicMeta = {
@@ -911,12 +902,12 @@ const Netdisk = {
             // 递增失败不影响访问
         }
 
-        const rawUrl = GitHubAPI.getRawUrl(file.path);
+        const sharedUrl = StorageAPI.sharedUrl(shareToken, file.name);
         return {
             name: file.name,
             size: file.size,
             type: file.type,
-            url: rawUrl,
+            url: sharedUrl,
             uploadedAt: file.uploadedAt,
             shareCreatedAt: file.shareCreatedAt || file.uploadedAt,
             expireDays: file.shareExpireDays !== undefined ? file.shareExpireDays : -1,
@@ -1158,11 +1149,8 @@ const Netdisk = {
         deletedFile = files.find(f => f.id === fileId);
         if (!deletedFile) throw new Error('文件不存在');
 
-        // 删除存储的文件
-        const fileInfo = await GitHubAPI.getContent(deletedFile.path);
-        if (fileInfo) {
-            await GitHubAPI.deleteFile(deletedFile.path, `管理员删除文件: ${deletedFile.name}`, fileInfo.sha);
-        }
+        // 删除对象存储中的文件
+        await StorageAPI.remove(deletedFile.path).catch(() => {});
 
         // 删除文件元数据
         await GitHubAPI.updateJsonData(
@@ -1185,8 +1173,7 @@ const Netdisk = {
         const files = (data && data.files) || [];
         const file = files.find(f => f.id === fileId);
         if (!file) throw new Error('文件不存在');
-        const rawUrl = GitHubAPI.getRawUrl(file.path);
-        return { url: rawUrl, name: file.name, type: file.type };
+        return { url: StorageAPI.downloadUrl(file.path, file.name), name: file.name, type: file.type };
     },
 
     // 冻结用户（管理员） - 禁止登录，保留数据

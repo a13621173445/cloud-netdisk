@@ -289,3 +289,69 @@ const GitHubAPI = {
         return response.json();
     }
 };
+
+/**
+ * 对象存储（rains3 S3 兼容）代理层
+ * 文件二进制读写走同源 /api/storage/*，由 Pages Function 完成 SigV4 签名
+ * 文件元数据（files.json）仍由 GitHubAPI 负责
+ */
+const StorageAPI = {
+
+    // 携带登录会话令牌的请求头
+    _authHeaders(extra) {
+        const headers = Object.assign({}, extra || {});
+        const token = localStorage.getItem('netdisk_session');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    },
+
+    // 上传文件（请求体为原始二进制，必须带 Content-Type）
+    async upload(key, file) {
+        const response = await fetch(`${CONFIG.getStorageBase()}/upload?key=${encodeURIComponent(key)}`, {
+            method: 'POST',
+            headers: this._authHeaders({ 'Content-Type': (file && file.type) || 'application/octet-stream' }),
+            body: file
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(result.error || `上传失败: ${response.status}`);
+        }
+        return result;
+    },
+
+    // 服务端复制对象
+    async copy(from, to) {
+        const response = await fetch(
+            `${CONFIG.getStorageBase()}/copy?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+            { method: 'POST', headers: this._authHeaders({ 'Content-Type': 'application/json' }) }
+        );
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(result.error || `复制失败: ${response.status}`);
+        }
+        return result;
+    },
+
+    // 删除对象
+    async remove(key) {
+        const response = await fetch(`${CONFIG.getStorageBase()}/delete?key=${encodeURIComponent(key)}`, {
+            method: 'DELETE',
+            headers: this._authHeaders()
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(result.error || `删除失败: ${response.status}`);
+        }
+        return result;
+    },
+
+    // 登录用户下载地址（令牌由 UI.forceDownload 自动附加）
+    downloadUrl(key, name) {
+        return `${CONFIG.getStorageBase()}/download?key=${encodeURIComponent(key)}&name=${encodeURIComponent(name || '')}`;
+    },
+
+    // 公开分享下载地址（凭 shareToken 校验，无需登录）
+    sharedUrl(token, name) {
+        return `${CONFIG.getStorageBase()}/shared?token=${encodeURIComponent(token)}&name=${encodeURIComponent(name || '')}`;
+    }
+};

@@ -299,7 +299,18 @@ const UI = {
      * @param {string} filename - 下载文件名
      */
     async forceDownload(url, filename) {
-        const response = await fetch(url);
+        // 同源的存储代理下载需要携带登录令牌
+        const options = {};
+        try {
+            const sameOrigin = new URL(url, window.location.href).origin === window.location.origin;
+            const token = localStorage.getItem('netdisk_session');
+            if (sameOrigin && token) {
+                options.headers = { 'Authorization': `Bearer ${token}` };
+            }
+        } catch (e) {
+            // 解析失败则按普通下载处理
+        }
+        const response = await fetch(url, options);
         if (!response.ok) {
             throw new Error('下载失败: ' + response.status);
         }

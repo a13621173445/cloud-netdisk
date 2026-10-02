@@ -134,6 +134,11 @@ const CONFIG = {
         return window.location.origin;
     },
 
+    // 获取对象存储代理地址（同源 /api/storage，服务端完成 S3 签名）
+    getStorageBase() {
+        return `${this.getApiBase()}/api/storage`;
+    },
+
     // 检查是否已配置完成（异步）
     async isConfigured() {
         const owner = this.getOwner();

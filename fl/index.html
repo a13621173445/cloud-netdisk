@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件挂载 - frpz.cc</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f7; color: #1d1d1f; min-height: 100vh; padding: 40px 16px;
+        }
+        .wrap { max-width: 860px; margin: 0 auto; }
+        h1 { font-size: 26px; margin-bottom: 6px; }
+        .sub { color: #6e6e73; font-size: 14px; margin-bottom: 24px; }
+        .card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 18px; }
+        .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        input[type=file] { display: none; }
+        .btn {
+            display: inline-block; padding: 9px 18px; border-radius: 8px; border: 1px solid #d2d2d7;
+            background: #fff; color: #1d1d1f; font-size: 14px; cursor: pointer; text-decoration: none;
+        }
+        .btn:hover { background: #f0f0f2; }
+        .btn.primary { background: #0071e3; border-color: #0071e3; color: #fff; }
+        .btn.primary:hover { background: #0077ed; }
+        .btn.danger { color: #ff3b30; border-color: #ffd6d3; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .progress { height: 8px; background: #e8e8ed; border-radius: 4px; overflow: hidden; margin-top: 12px; display: none; }
+        .progress > div { height: 100%; width: 0; background: #0071e3; transition: width .2s; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #f0f0f2; }
+        th { color: #6e6e73; font-weight: 500; font-size: 13px; }
+        td.name { word-break: break-all; }
+        a.filelink { color: #0071e3; text-decoration: none; }
+        a.filelink:hover { text-decoration: underline; }
+        .empty { color: #aeaeb2; text-align: center; padding: 28px 0; }
+        .hint { font-size: 13px; color: #6e6e73; margin-top: 10px; }
+        .toast {
+            position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+            background: #1d1d1f; color: #fff; padding: 10px 20px; border-radius: 10px;
+            font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 9;
+        }
+        .toast.show { opacity: .92; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>文件挂载</h1>
+        <p class="sub">上传后按 <code>frpz.cc/fl/文件名</code> 公开访问，音视频支持拖动播放。</p>
+
+        <div class="card">
+            <div class="row">
+                <input type="file" id="filePicker">
+                <button class="btn primary" id="uploadBtn">选择文件并挂载</button>
+                <span id="fileName" class="sub" style="margin:0"></span>
+                <a class="btn" href="/" style="margin-left:auto">返回首页</a>
+            </div>
+            <div class="progress" id="progressBar"><div></div></div>
+            <p class="hint">支持：html / txt / md / mp4 / mkv / mov / avi / webm / mp3 / flac / wav / ogg / opus / 图片 / pdf 等（ffmpeg 可解码的格式均可播放），单文件 ≤ 100MB。同名文件会被覆盖。</p>
+        </div>
+
+        <div class="card">
+            <div class="row" style="justify-content:space-between">
+                <strong>已挂载文件</strong>
+                <button class="btn" id="refreshBtn">刷新</button>
+            </div>
+            <div id="listBox" style="margin-top:10px"><div class="empty">加载中…</div></div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const token = localStorage.getItem('netdisk_session');
+        if (!token) { location.href = '/netdisk/login'; }
+
+        const $ = (id) => document.getElementById(id);
+        const authHeaders = () => ({ 'Authorization': 'Bearer ' + token });
+
+        function toast(msg) {
+            $('toast').textContent = msg;
+            $('toast').classList.add('show');
+            setTimeout(() => $('toast').classList.remove('show'), 2200);
+        }
+
+        function fmtSize(n) {
+            if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+            if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+            return n + ' B';
+        }
+
+        function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+        async function loadList() {
+            try {
+                const resp = await fetch('/api/fl/list', { headers: authHeaders() });
+                if (resp.status === 401) { localStorage.removeItem('netdisk_session'); location.href = '/netdisk/login'; return; }
+                const data = await resp.json();
+                if (!data.ok) { $('listBox').innerHTML = '<div class="empty">' + esc(data.error || '加载失败') + '</div>'; return; }
+                if (!data.items.length) { $('listBox').innerHTML = '<div class="empty">还没有挂载任何文件</div>'; return; }
+                let html = '<table><thead><tr><th>文件名</th><th>大小</th><th>更新时间</th><th>直链</th><th></th></tr></thead><tbody>';
+                for (const it of data.items) {
+                    const full = location.origin + it.url;
+                    html += '<tr>' +
+                        '<td class="name"><a class="filelink" href="' + it.url + '" target="_blank">' + esc(it.name) + '</a></td>' +
+                        '<td>' + fmtSize(it.size) + '</td>' +
+                        '<td>' + esc((it.lastModified || '').replace('T', ' ').slice(0, 16)) + '</td>' +
+                        '<td><button class="btn" onclick="copyLink(\'' + encodeURIComponent(full).replace(/'/g, "\\'") + '\')">复制</button></td>' +
+                        '<td><button class="btn danger" onclick="delFile(\'' + encodeURIComponent(it.name).replace(/'/g, "\\'") + '\',\'' + esc(it.name).replace(/'/g, "\\'") + '\')">删除</button></td>' +
+                        '</tr>';
+                }
+                html += '</tbody></table>';
+                $('listBox').innerHTML = html;
+            } catch (e) {
+                $('listBox').innerHTML = '<div class="empty">网络错误：' + esc(e.message) + '</div>';
+            }
+        }
+
+        function copyLink(enc) {
+            const link = decodeURIComponent(enc);
+            (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
+                .then(() => toast('已复制 ' + link))
+                .catch(() => prompt('手动复制链接：', link));
+        }
+
+        async function delFile(enc, name) {
+            if (!confirm('确定删除挂载「' + name + '」？删除后原链接立即失效。')) return;
+            const resp = await fetch('/api/fl/delete?name=' + enc, { method: 'DELETE', headers: authHeaders() });
+            const data = await resp.json();
+            toast(data.ok ? '已删除' : (data.error || '删除失败'));
+            if (data.ok) loadList();
+        }
+
+        $('uploadBtn').addEventListener('click', () => $('filePicker').click());
+        $('filePicker').addEventListener('change', () => {
+            const file = $('filePicker').files[0];
+            if (!file) return;
+            if (file.name.toLowerCase() === 'index.html') { toast('index.html 与列表页冲突，请改名'); $('filePicker').value = ''; return; }
+            if (file.size > 100 * 1024 * 1024) { toast('超过 100MB 限制'); $('filePicker').value = ''; return; }
+            $('fileName').textContent = file.name + '（' + fmtSize(file.size) + '）';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/fl/upload?name=' + encodeURIComponent(file.name));
+            xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            xhr.upload.onprogress = (ev) => {
+                $('progressBar').style.display = 'block';
+                $('progressBar').firstElementChild.style.width = (ev.loaded / ev.total * 100).toFixed(1) + '%';
+            };
+            xhr.onload = () => {
+                let msg = '挂载完成';
+                try {
+                    const d = JSON.parse(xhr.responseText);
+                    if (d.ok) { copyLink(location.origin + d.url); } else { msg = d.error || '失败'; }
+                } catch (e) { msg = '失败（' + xhr.status + '）'; }
+                toast(msg);
+                $('progressBar').style.display = 'none';
+                $('filePicker').value = ''; $('fileName').textContent = '';
+                loadList();
+            };
+            xhr.onerror = () => { toast('上传失败：网络错误'); $('progressBar').style.display = 'none'; };
+            xhr.send(file);
+        });
+        $('refreshBtn').addEventListener('click', loadList);
+        loadList();
+    </script>
+</body>
+</html>

@@ -52,7 +52,15 @@ function disposition(name) {
 export async function onRequestGet(context) {
     const { request, env } = context;
     const url = new URL(request.url);
+
+    // /fl 与 /fl/ → 交还给静态管理页 fl/index.html
+    if (url.pathname === '/fl') {
+        return Response.redirect(url.origin + '/fl/', 301);
+    }
     const rawName = url.pathname.slice('/fl/'.length);
+    if (rawName === '' || rawName === 'index.html') {
+        return env.ASSETS.fetch(new Request(url.origin + '/fl/index.html'));
+    }
     const name = safeFlName(rawName);
     if (!name) {
         return errorPage('文件名不合法。', 400);

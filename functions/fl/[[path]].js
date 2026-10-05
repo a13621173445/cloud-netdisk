@@ -3,10 +3,20 @@
  * - GET/HEAD /fl/<文件名> → 从 rains3 桶 fl/ 前缀读取并流式返回
  * - 透传 Range，支持 mp4/mp3/flac 等音视频拖动进度条
  * - html/txt 直接 inline 渲染；其余按类型播放或下载
- * - 列表页 /fl/ 由静态文件 fl/index.html 提供（Pages 静态资源优先于 Functions）
+ * - 列表页 /fl/ 由本函数渲染（HTML 内嵌于 _lib/fladmin.js，源为 fl/index.html）
  */
 
 import { s3Request, safeFlName, FL_PREFIX } from '../_lib/s3.js';
+import { FL_ADMIN_B64 } from '../_lib/fladmin.js';
+
+// 管理页（源文件 fl/index.html，自动内嵌为 base64；Pages 构建命令不含 fl/，故由函数直接渲染）
+function renderAdminPage() {
+    const bin = atob(FL_ADMIN_B64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const html = new TextDecoder('utf-8').decode(bytes);
+    return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
 
 function errorPage(message, status = 404) {
     return new Response(
@@ -53,13 +63,13 @@ export async function onRequestGet(context) {
     const { request, env } = context;
     const url = new URL(request.url);
 
-    // /fl 与 /fl/ → 交还给静态管理页 fl/index.html
+    // /fl → 301 到 /fl/；/fl/ 与 /fl/index.html → 渲染管理页
     if (url.pathname === '/fl') {
         return Response.redirect(url.origin + '/fl/', 301);
     }
     const rawName = url.pathname.slice('/fl/'.length);
     if (rawName === '' || rawName === 'index.html') {
-        return env.ASSETS.fetch(new Request(url.origin + '/fl/index.html'));
+        return renderAdminPage();
     }
     const name = safeFlName(rawName);
     if (!name) {
